@@ -1,7 +1,6 @@
 from django.db import models
 
 class Car(models.Model):
-
     ESTIMATE_LEVEL_CHOICES = [
         ("nodamage", "No Damage"),
         ("cheap", "Cheap"),

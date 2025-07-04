@@ -7,5 +7,6 @@ env/
 venv/
 *.log
 *.env
-/static/
+core/static/core/libs/
 /media/
+/static/
