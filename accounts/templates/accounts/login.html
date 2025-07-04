@@ -1,0 +1,72 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}
+Log In
+{% endblock title %}</title>
+
+{% block content %}
+
+<body>
+    <style>
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        .auth-card {
+            background-color: rgba(26, 37, 60, 0.7);
+            backdrop-filter: blur(12px);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 450px;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+    </style>
+    <main class="main-content">
+        <div class="auth-card">
+            <div class="p-4 p-md-5">
+                <h2 class="text-center mb-4 fw-bold">Log In</h2>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger p-2 text-center">
+                        {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="form-floating mb-3">
+                        <label for="id_username">UserName: </label>
+                        {{ form.username }}
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <label for="id_password">Password: </label>
+                        {{ form.password }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg mt-4">Log In</button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <small>Dont Have a Account?</small><a href="{% url 'accounts:register' %}"
+                        class="form-link fw-bold">Sign Up</a></small>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
+{% endblock content %}

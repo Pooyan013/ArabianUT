@@ -1,0 +1,86 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Editing Profile{% endblock title %}
+
+{% block content %}
+<style>
+    .main-content {
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+
+    .auth-card {
+        background-color: rgba(26, 37, 60, 0.8);
+        backdrop-filter: blur(10px);
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 500px;
+        color: #e0e0e0;
+    }
+
+    .page-title {
+        color: #ffffff;
+        font-weight: 600;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .form-control-glass {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+    }
+
+    .form-control-glass:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+
+    .form-floating>label {
+        color: #b0bac9;
+    }
+
+    .alert-success {
+        background-color: rgba(25, 135, 84, 0.5);
+        border-color: rgba(25, 135, 84, 0.7);
+        color: #ffffff;
+    }
+</style>
+
+<main class="main-content">
+    <div class="auth-card">
+        <div class="p-4 p-md-5">
+            <h2 class="page-title text-center mb-4">Editing Profile</h2>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} text-center">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% for field in user_form %}
+                <div class="form-floating mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                </div>
+                {% endfor %}
+
+                {% for field in profile_form %}
+                <div class="form-floating mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                </div>
+                {% endfor %}
+
+                <button type="submit" class="btn btn-primary w-100 btn-lg mt-4">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock content %}
