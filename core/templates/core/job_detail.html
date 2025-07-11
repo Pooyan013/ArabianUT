@@ -1,0 +1,179 @@
+{% extends "core/base.html" %}
+
+{% block title %}Job Details for {{ job.car.plate_number }}{% endblock title %}
+
+{% block content %}
+<div class="container-fluid my-4">
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Car Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Brand:</strong> {{ job.car.brand }}</p>
+                    <p><strong>Plate Number:</strong> {{ job.car.plate_number }}</p>
+                    <p><strong>Color:</strong> {{ job.car.color }}</p>
+                    <p><strong>Year:</strong> {{ job.car.year }}</p>
+                    <hr>
+                    <p><strong>Claim Number:</strong> {{ job.car.claim_number }}</p>
+                    <p><strong>Estimate Number:</strong> {{ job.car.estimate_number }}</p>
+                    <p><strong>Estimated Cost:</strong> <span class="badge bg-secondary">{{
+                            job.car.get_estimated_cost_display }}</span></p>
+                    <p><strong>Registered At:</strong> {{ job.car.registered_at|date:"Y-m-d H:i" }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'core:edit_car' job.car.id %}" class="btn btn-sm btn-outline-secondary">Edit Car
+                        Info</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Job Workflow</h5>
+                    <span class="badge bg-primary fs-6">{{ job.get_status_display }}</span>
+                </div>
+                <div class="card-body p-4">
+
+                    {# --- Stage: Pending for Expert --- #}
+                    {% if job.status == 'pending_expert' %}
+                    <div class="text-center p-4">
+                        <h5 class="mb-3">Waiting for Expert Inspection</h5>
+                        <p>The car is waiting to be inspected by a technical expert.</p>
+                        <form action="{% url 'core:update_job_status' job.id 'pending_approval' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">Mark as Inspected & Proceed to
+                                Approval</button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    {# --- Stage: Pending Approval --- #}
+                    {% if job.status == 'pending_approval' %}
+                    <div class="p-2">
+                        <h5>Approval Stage</h5>
+                        <p>Enter the deal amount and add required parts.</p>
+
+                        <form method="post" class="mb-4 border p-3 rounded">
+                            {% csrf_token %}
+                            {{ deal_form.as_p }}
+                            <button type="submit" name="update_deal" class="btn btn-info">Update Deal</button>
+                        </form>
+
+                        <form method="post" enctype="multipart/form-data" class="mb-4 border p-3 rounded">
+                            <h6>Add Required Part</h6>
+                            {% csrf_token %}
+                            {{ part_form.as_p }}
+                            <button type="submit" name="add_part" class="btn btn-info mt-2">Add Part</button>
+                        </form>
+
+                        <h6>Required Parts List</h6>
+                        <ul class="list-group mb-4">
+                            {% for part in parts %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ part.name }}
+                                <a href="{{ part.picture.url }}" target="_blank"
+                                    class="btn btn-sm btn-outline-light text-dark">View Picture</a>
+                            </li>
+                            {% empty %}
+                            <li class="list-group-item">No parts added yet.</li>
+                            {% endfor %}
+                        </ul>
+
+                        <div class="text-center mt-4">
+                            <form action="{% url 'core:update_job_status' job.id 'pending_start' %}" method="post">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success">Finalize Approval & Proceed to
+                                    Start</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {# --- Stage: Pending to Start, Pending Part, or Working (Timer Display) --- #}
+                    {% if job.status == 'pending_start' or job.status == 'pending_part' or job.status == 'working' %}
+                    <div class="text-center p-3">
+                        <h5>Repair Timer</h5>
+                        {% if job.timer_end_time %}
+                        <p>Estimated completion by: <strong>{{ job.timer_end_time|date:"Y-m-d H:i" }}</strong></p>
+                        {% else %}
+                        <p>Timer not started yet.</p>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-center gap-2">
+                        {% if job.status == 'pending_start' %}
+                        <form action="{% url 'core:update_job_status' job.id 'working' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Start Work</button>
+                        </form>
+                        <form action="{% url 'core:update_job_status' job.id 'pending_part' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning">Order Parts</button>
+                        </form>
+                        {% elif job.status == 'pending_part' %}
+                        <form action="{% url 'core:update_job_status' job.id 'working' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Parts Received, Start Work</button>
+                        </form>
+                        {% elif job.status == 'working' %}
+                        <form action="{% url 'core:update_job_status' job.id 'ready_exit' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">Finish Work</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {# --- Stage: Ready for Exit --- #}
+                    {% if job.status == 'ready_exit' %}
+                    <div class="text-center p-4">
+                        <h5>Ready for Exit</h5>
+                        <p>The job is complete. Confirm the LPO status before archiving.</p>
+                        {% if job.lpo_confirmed %}
+                        <div class="alert alert-success">LPO Confirmed. Ready to archive.</div>
+                        <form action="{% url 'core:update_job_status' job.id 'archived' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-dark">Archive Job</button>
+                        </form>
+                        {% else %}
+                        <div class="alert alert-warning">LPO is not yet confirmed.</div>
+                        <form method="post" class="border p-3 rounded mt-3">
+                            {% csrf_token %}
+                            <div class="form-check">
+                                {{ lpo_form.lpo_confirmed }}
+                                <label for="{{ lpo_form.lpo_confirmed.id_for_label }}" class="form-check-label">
+                                    {{ lpo_form.lpo_confirmed.label }}
+                                </label>
+                            </div>
+                            <button type="submit" name="confirm_lpo" class="btn btn-primary mt-3">Confirm LPO</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {# --- Stage: Archived --- #}
+                    {% if job.status == 'archived' %}
+                    <div class="text-center p-5">
+                        <h5 class="text-muted">Job Archived</h5>
+                        <p class="text-muted">This job was completed and archived on {{ job.exited_at|date:"Y-m-d" }}.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

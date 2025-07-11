@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+
+{% block title %}Car Management{% endblock title %}
+
+{% block content %}
+<style>
+    .status-badge {
+        padding: 0.3em 0.7em;
+        border-radius: 0.25rem;
+        font-size: 0.8em;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .status-pending_expert {
+        background-color: #6c757d;
+    }
+
+    .status-pending_approval {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .status-working {
+        background-color: #0d6efd;
+    }
+
+    .status-ready_exit {
+        background-color: #198754;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Active Repair Jobs</h4>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCarModal">
+                <i class="bi bi-plus-circle me-2"></i>Register New Car
+            </button>
+        </div>
+        <div class="card-body p-0">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-success m-3">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+
+            <div class="table-responsive">
+                <<table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Plate Number</th>
+                            <th>Brand</th>
+                            <th>Claim Number</th>
+                            <th>Status</th>
+                            <th>Date Registered</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr>
+                            <td><strong>{{ job.car.plate_number }}</strong></td>
+                            <td>{{ job.car.brand }}</td>
+                            <td>{{ job.car.claim_number }}</td>
+                            <td>
+                                <span class="status-badge status-{{ job.status }}">
+                                    {{ job.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ job.car.registered_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'core:job_detail' job.id %}" class="btn btn-sm btn-outline-secondary">
+                                    Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">No active jobs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addCarModal" tabindex="-1" aria-labelledby="addCarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCarModalLabel">Register New Car</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Register Car</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}
