@@ -1,9 +1,60 @@
 {% extends "accounts/base.html" %}
+{% load static %}
 
 {% block title %}Edit Car: {{ car.plate_number }}{% endblock title %}
 
 {% block content %}
 <main class="main-content">
+    <style>
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .auth-card {
+            background-color: rgba(26, 37, 60, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 550px;
+            color: #e0e0e0;
+        }
+
+        .page-title {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .form-control-glass {
+            background-color: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            color: #ffffff !important;
+        }
+
+        .form-control-glass:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.35) !important;
+        }
+
+        .form-floating>.form-control-glass {
+            padding: 1rem 0.75rem;
+        }
+
+        .form-floating>label {
+            color: #fff;
+            padding: 1rem 0.75rem;
+        }
+
+        .form-floating>.form-control-glass:focus~label,
+        .form-floating>.form-control-glass:not(:placeholder-shown)~label {
+            opacity: .65;
+            transform: scale(.85) translateY(-.5rem) translateX(.15rem);
+        }
+    </style>
     <div class="auth-card">
         <div class="p-4 p-md-5">
             <h2 class="text-center mb-4 fw-bold">Edit Car Information</h2>
@@ -11,14 +62,12 @@
 
             <form method="post">
                 {% csrf_token %}
-
                 {% for field in form %}
                 <div class="form-floating mb-3">
+                    <label for="{{ field.id_for_label }}">{{ field.label }} :</label>
                     {{ field }}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 </div>
                 {% endfor %}
-
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                     <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Save Changes</button>

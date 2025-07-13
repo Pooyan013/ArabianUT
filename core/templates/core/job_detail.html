@@ -26,9 +26,7 @@
                     <p><strong>Year:</strong> {{ job.car.year }}</p>
                     <hr>
                     <p><strong>Claim Number:</strong> {{ job.car.claim_number }}</p>
-                    <p><strong>Estimate Number:</strong> {{ job.car.estimate_number }}</p>
-                    <p><strong>Estimated Cost:</strong> <span class="badge bg-secondary">{{
-                            job.car.get_estimated_cost_display }}</span></p>
+                    <p><strong>Estimated Cost:</strong> {{ job.car.get_estimated_cost_display }}</p>
                     <p><strong>Registered At:</strong> {{ job.car.registered_at|date:"Y-m-d H:i" }}</p>
                 </div>
                 <div class="card-footer">
@@ -82,15 +80,41 @@
                         <ul class="list-group mb-4">
                             {% for part in parts %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ part.name }}
-                                <a href="{{ part.picture.url }}" target="_blank"
-                                    class="btn btn-sm btn-outline-light text-dark">View Picture</a>
+                                <span>
+                                    {{ part.name }}
+                                    {% if part.picture %}
+                                    <a href="{{ part.picture.url }}" target="_blank" class="ms-2 text-decoration-none">
+                                        <i class="bi bi-card-image"></i>
+                                    </a>
+                                    {% endif %}
+                                </span>
+
+                                <div>
+                                    {% if part.is_bought %}
+                                    <span class="badge bg-success">Bought</span>
+                                    {% else %}
+                                    <form action="{% url 'core:mark_part_as_bought' part.id %}" method="post"
+                                        class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Mark as
+                                            Bought</button>
+                                    </form>
+                                    {% endif %}
+
+                                    <form action="{% url 'core:delete_part' part.id %}" method="post"
+                                        class="d-inline ms-1">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Are you sure?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </li>
                             {% empty %}
                             <li class="list-group-item">No parts added yet.</li>
                             {% endfor %}
                         </ul>
-
                         <div class="text-center mt-4">
                             <form action="{% url 'core:update_job_status' job.id 'pending_start' %}" method="post">
                                 {% csrf_token %}
@@ -106,7 +130,11 @@
                     <div class="text-center p-3">
                         <h5>Repair Timer</h5>
                         {% if job.timer_end_time %}
-                        <p>Estimated completion by: <strong>{{ job.timer_end_time|date:"Y-m-d H:i" }}</strong></p>
+                        <div id="countdown-timer" class="fs-4 fw-bold text-primary"
+                            data-end-time="{{ job.timer_end_time.isoformat }}">
+                        </div>
+                        <p class="text-muted small">Estimated completion by: {{ job.timer_end_time|date:"Y-m-d H:i" }}
+                        </p>
                         {% else %}
                         <p>Timer not started yet.</p>
                         {% endif %}
@@ -177,3 +205,32 @@
     </div>
 </div>
 {% endblock content %}
+{% block scripts %}
+<script>
+    const countdownElement = document.getElementById('countdown-timer');
+
+    if (countdownElement) {
+        const endTime = new Date(countdownElement.dataset.endTime).getTime();
+
+        const timerInterval = setInterval(function () {
+            const now = new Date().getTime();
+
+            const distance = endTime - now;
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            countdownElement.innerHTML = days + "d " + hours + "h " + minutes + "m " + seconds + "s ";
+
+            if (distance < 0) {
+                clearInterval(timerInterval);
+                countdownElement.innerHTML = "TIME'S UP";
+                countdownElement.classList.remove('text-primary');
+                countdownElement.classList.add('text-danger');
+            }
+        }, 1000);
+    }
+</script>
+{% endblock scripts %}

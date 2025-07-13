@@ -43,10 +43,11 @@ class PartForm(forms.ModelForm):
     """Form to add a single required part with its picture."""
     class Meta:
         model = Part
-        fields = ['name', 'picture']
+        fields = ['name', 'picture', 'price']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Part Name'}),
             'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'price':forms.NumberInput(attrs = {'class': 'form-control', 'placeholder': 'Part Price'})
         }
 
 

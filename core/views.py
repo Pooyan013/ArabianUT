@@ -9,61 +9,59 @@ from .forms import DealUpdateForm, PartForm, LPOConfirmationForm, CarRegistratio
 def index(request):
     return render(request, 'core/index.html')
 
-
 @login_required
 def job_detail_view(request, job_id):
     job = get_object_or_404(RepairJob, id=job_id)
     parts = Part.objects.filter(repair_job=job)
 
-    if request.method == 'POST':
-        # Existing forms
-        deal_form = DealUpdateForm(request.POST, instance=job)
-        part_form = PartForm(request.POST, request.FILES)
-        # New LPO form
-        lpo_form = LPOConfirmationForm(request.POST, instance=job)
+    deal_form = DealUpdateForm(instance=job)
+    part_form = PartForm()
+    lpo_form = LPOConfirmationForm(instance=job)
 
+    if request.method == 'POST':
         if 'update_deal' in request.POST:
+            deal_form = DealUpdateForm(request.POST, instance=job)
             if deal_form.is_valid():
                 deal_form.save()
                 messages.success(request, 'Deal amount updated.')
-        
+                return redirect('core:job_detail', job_id=job.id)
+
         elif 'add_part' in request.POST:
+            part_form = PartForm(request.POST, request.FILES)
             if part_form.is_valid():
                 new_part = part_form.save(commit=False)
                 new_part.repair_job = job
                 new_part.save()
                 messages.success(request, 'New part added.')
-        
-        # Handle the new LPO form submission
+                return redirect('core:job_detail', job_id=job.id)
+
         elif 'confirm_lpo' in request.POST:
+            lpo_form = LPOConfirmationForm(request.POST, instance=job)
             if lpo_form.is_valid():
                 lpo_form.save()
                 messages.success(request, 'LPO status confirmed.')
-
-        return redirect('core:job_detail', job_id=job.id)
-
-    else:
-        deal_form = DealUpdateForm(instance=job)
-        part_form = PartForm()
-        lpo_form = LPOConfirmationForm(instance=job)
-
+                return redirect('core:job_detail', job_id=job.id)
+    
     context = {
         'job': job,
         'parts': parts,
         'deal_form': deal_form,
         'part_form': part_form,
-        'lpo_form': lpo_form, 
+        'lpo_form': lpo_form,
     }
     return render(request, 'core/job_detail.html', context)
 
-@login_required
 def car_management_view(request):
     if request.method == 'POST':
         form = CarRegistrationForm(request.POST)
         if form.is_valid():
-            new_car = form.save()
-            RepairJob.objects.create(car=new_car)
+            new_car = form.save(commit=False)
             
+            new_car.registered_by = request.user
+            
+            new_car.save()
+
+            RepairJob.objects.create(car=new_car)
             messages.success(request, f'Car with plate number {new_car.plate_number} was successfully registered.')
             return redirect('core:car_list')
     else:
@@ -136,3 +134,25 @@ def edit_car_view(request, car_id):
         'car': car
     }
     return render(request, 'core/edit_car.html', context)
+
+
+@login_required
+def delete_part_view(request, part_id):
+    part = get_object_or_404(Part, id=part_id)
+    
+    job_id = part.repair_job.id
+    
+    if request.method == 'POST':
+        part.delete()
+        messages.success(request, f'Part "{part.name}" was deleted successfully.')
+    
+    return redirect('core:job_detail', job_id=job_id)
+
+@login_required
+def mark_part_as_bought_view(request, part_id):
+    part = get_object_or_404(Part, id=part_id)
+    if request.method == 'POST':
+        part.is_bought = True
+        part.save()
+        messages.success(request, f'Part "{part.name}" marked as bought.')
+    return redirect('core:job_detail', job_id=part.repair_job.id)

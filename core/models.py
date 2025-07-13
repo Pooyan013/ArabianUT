@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth.models import User
 
 class Car(models.Model):
     """Stores permanent information about a physical car."""
@@ -19,6 +20,7 @@ class Car(models.Model):
     claim_number = models.CharField(max_length=50, verbose_name="Claim Number", default='No Claim')
     estimate_number = models.CharField(max_length=50, verbose_name="Estimate Number", default='N/A')
     registered_at = models.DateTimeField(default=timezone.now, verbose_name="Time Registered")
+    registered_by = models.ForeignKey(User,on_delete=models.SET_NULL, null=True,blank=True,verbose_name="Registered By")   
     estimated_cost = models.CharField(
         max_length=10,
         choices=ESTIMATE_COST_CHOICES,
@@ -67,6 +69,8 @@ class Part(models.Model):
     repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="parts", verbose_name="Repair Job")
     name = models.CharField(max_length=200, verbose_name="Part Name")
     picture = models.ImageField(upload_to="parts/", verbose_name="Part Picture", null=True, blank=True)
+    price = models.FloatField(max_length=50, verbose_name="PartPrice", default= 10.0)
+    is_bought = models.BooleanField(default=False, verbose_name="Is Bought?")
 
     def __str__(self):
         return f"{self.name} for Job #{self.repair_job.id}"
