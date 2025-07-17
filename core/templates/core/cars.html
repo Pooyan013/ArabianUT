@@ -4,8 +4,10 @@
 
 {% block content %}
 <style>
-    .table>tbody>tr>td {
+    .table>tbody>tr>td,
+    .table>tbody>tr>th {
         border-top: 1px solid #f0f0f0;
+        vertical-align: middle;
     }
 
     .status-badge {
@@ -14,10 +16,6 @@
         font-size: 0.8em;
         font-weight: 700;
         color: #fff;
-    }
-
-    .table {
-        padding: 1.5rem;
     }
 
     .status-pending_expert {
@@ -36,33 +34,78 @@
     .status-ready_exit {
         background-color: #198754;
     }
+
+    .status-pending_approval {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .status-quotation {
+        background-color: #0dcaf0;
+    }
+
+    .status-working {
+        background-color: #0d6efd;
+    }
 </style>
 
-<div class="container-fluid mt-4 my-5">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+<div class="container-lg my-5">
+    <div class="card shadow border-0" style="border-radius: 1rem;">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0">Active Repair Jobs</h4>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCarModal">
-                <i class="bi bi-plus-circle me-2"></i>Register New Car
+                Register New Car <i class="bi bi-plus-circle me-2"></i>
             </button>
         </div>
-        <div class="card-body p-0">
+
+        <div class="card-body p-4">
+
+            <form method="get" class="row g-3 align-items-center mb-4 filter-bar">
+                <div class="col-lg-4">
+                    <div class="filter-input-wrapper">
+                        {{ filter_form.plate_number }}
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="filter-input-wrapper">
+                        <i class="bi bi-toggles filter-icon"></i>
+                        {{ filter_form.status }}
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="filter-input-wrapper">
+                        <i class="bi bi-speedometer2 filter-icon"></i>
+                        {{ filter_form.estimated_cost }}
+                    </div>
+                </div>
+                <div class="col-lg-2">
+                    <button type="submit" class="btn btn-primary w-100 filter-button">
+                        <i class="bi bi-funnel-fill me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+
             {% if messages %}
             {% for message in messages %}
-            <div class="alert alert-success m-3">{{ message }}</div>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             {% endfor %}
             {% endif %}
 
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover table-borderless mb-0">
+                    <thead class="text-muted small text-uppercase">
                         <tr>
-                            <th>Plate Number</th>
-                            <th>Brand</th>
-                            <th>Claim Number</th>
-                            <th>Status</th>
-                            <th>Date Registered</th>
-                            <th>Actions</th>
+                            <th class="py-3">Plate Number</th>
+                            <th class="py-3">Brand</th>
+                            <th class="py-3">Model</th>
+                            <th class="py-3">Claim Number</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3">Date Registered</th>
+                            <th class="py-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -70,6 +113,7 @@
                         <tr>
                             <td><strong>{{ job.car.plate_number }}</strong></td>
                             <td>{{ job.car.brand }}</td>
+                            <td>{{ job.car.model }}</td>
                             <td>{{ job.car.claim_number }}</td>
                             <td>
                                 <span class="status-badge status-{{ job.status }}">
@@ -85,7 +129,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center py-5">No active jobs found.</td>
+                            <td colspan="7" class="text-center py-5">No active jobs found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -96,9 +140,9 @@
 </div>
 
 <div class="modal fade" id="addCarModal" tabindex="-1" aria-labelledby="addCarModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCarModalLabel">Register New Car</h5>

@@ -1,36 +1,28 @@
 from django import forms
-from .models import RepairJob, Part, Car
+from .models import Car, RepairJob, QuotationItem, PurchasedPart
 
 class CarRegistrationForm(forms.ModelForm):
+    """Form for registering a new car."""
     class Meta:
         model = Car
         fields = [
-            'brand', 
-            'plate_number', 
-            'color', 
-            'year', 
-            'claim_number', 
-            'estimated_cost', 
+            'brand', 'model', 'plate_number', 'color', 'year', 
+            'claim_number', 'estimated_cost', 'car_picture',
         ]
         labels = {
-            'brand': 'Brand',
-            'plate_number': 'Plate Number',
-            'color': 'Color',
-            'year': 'Year Manufactured',
-            'claim_number': 'Claim Number',
-            'estimated_cost': 'Estimated Cost Level', 
+            'brand': 'Brand', 'model': 'Model', 'plate_number': 'Plate Number',
+            'color': 'Color', 'year': 'Year Manufactured', 'claim_number': 'Claim Number',
+            'estimated_cost': 'Estimated Cost Level', 'car_picture': 'Car Picture',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            if isinstance(field.widget, forms.Select):
-                field.widget.attrs.update({'class': 'form-select'})
-            else:
-                field.widget.attrs.update({'class': 'form-control'})
+            widget_class = 'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
+            field.widget.attrs.update({'class': widget_class})
 
 class DealUpdateForm(forms.ModelForm):
-    """Form to update the deal amount."""
+    """Form to update the deal amount for a repair job."""
     class Meta:
         model = RepairJob
         fields = ['deal']
@@ -39,22 +31,72 @@ class DealUpdateForm(forms.ModelForm):
             'deal': forms.NumberInput(attrs={'class': 'form-control'})
         }
 
-class PartForm(forms.ModelForm):
-    """Form to add a single required part with its picture."""
+class QuotationItemForm(forms.ModelForm):
+    """Form to add an item to the quotation."""
     class Meta:
-        model = Part
+        model = QuotationItem
         fields = ['name', 'picture', 'price']
+        labels = {
+            'name': 'Item/Part Name',
+            'picture': 'Picture (Optional)',
+            'price': 'Estimated Price',
+        }
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Part Name'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
             'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'price':forms.NumberInput(attrs = {'class': 'form-control', 'placeholder': 'Part Price'})
+            'price': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-
-
-class LPOConfirmationForm(forms.ModelForm):
-    """A simple form to update the LPO status."""
+class FinalConfirmationForm(forms.ModelForm):
+    """Form for final LPO and Signature confirmation."""
     class Meta:
         model = RepairJob
-        fields = ['lpo_confirmed']
-        labels = {'lpo_confirmed': 'I confirm the LPO is positive and the payment is settled.'}
+        fields = ['lpo_confirmed', 'sign_confirmed']
+        labels = {
+            'lpo_confirmed': 'I confirm the LPO is positive.',
+            'sign_confirmed': 'I confirm the customer signature is received.',
+        }
+
+class JobFilterForm(forms.Form):
+    """Form for filtering the list of repair jobs."""
+    STATUS_CHOICES = [('', 'All Statuses')] + RepairJob.Stage.choices
+    ESTIMATE_CHOICES = [('', 'All Estimates')] + Car.ESTIMATE_COST_CHOICES
+    
+    plate_number = forms.CharField(
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Plate Number'})
+    )
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES, 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    estimated_cost = forms.ChoiceField(
+        choices=ESTIMATE_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+class PurchasedPartForm(forms.ModelForm):
+    """
+    A form for logging the details of an actual part that has been purchased.
+    """
+    class Meta:
+        model = PurchasedPart
+        fields = ['name', 'final_price', 'purchased_on', 'invoice_picture']
+        labels = {
+            'name': 'Part Name',
+            'final_price': 'Actual Price Paid',
+            'purchased_on': 'Date Purchased',
+            'invoice_picture': 'Invoice/Receipt Picture (Optional)',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'final_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'purchased_on': forms.DateInput(
+                attrs={'class': 'form-control', 'type': 'date'}
+            ),
+            'invoice_picture': forms.ClearableFileInput(
+                attrs={'class': 'form-control'}
+            ),
+        }

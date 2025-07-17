@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "core",
     "accounts",
+    'accounting',
+    'reports',
 ]
 
 MIDDLEWARE = [
@@ -76,7 +78,7 @@ WSGI_APPLICATION = 'arabianUT.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'arabianUT',
+        'NAME': 'UnitedArabia',
         'USER': 'postgres',
         'PASSWORD': 2680328442,
         'HOST': 'localhost',
@@ -109,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Muscat'
 
 USE_I18N = True
 

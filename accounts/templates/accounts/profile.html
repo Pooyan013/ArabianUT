@@ -1,9 +1,10 @@
-{% extends 'accounts/base.html' %}
+{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}Editing Profile{% endblock title %}
 
 {% block content %}
+
 <style>
     .main-content {
         flex-grow: 1;
@@ -50,6 +51,7 @@
     }
 </style>
 
+
 <main class="main-content">
     <div class="auth-card">
         <div class="p-4 p-md-5">
@@ -61,25 +63,26 @@
             {% endfor %}
             {% endif %}
 
-            <form method="post">
+            <form method="post" class="mb-4">
                 {% csrf_token %}
 
                 {% for field in user_form %}
                 <div class="form-floating mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                </div>
+                    {{ field.label_tag }} {{ field }}</div>
                 {% endfor %}
 
                 {% for field in profile_form %}
                 <div class="form-floating mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                </div>
+                    {{ field.label_tag }} {{ field }} </div>
                 {% endfor %}
 
+                <div class="text-center">
+                    <a href="{% url 'accounts:password_change' %}" class="btn btn-sm btn-outline-warning">Change
+                        Password</a>
+                </div>
                 <button type="submit" class="btn btn-primary w-100 btn-lg mt-4">Save Changes</button>
             </form>
+
         </div>
     </div>
 </main>

@@ -1,0 +1,76 @@
+{% extends "core/base.html" %}
+
+{% block title %}Financial Report{% endblock title %}
+
+{% block content %}
+<div class="container-lg my-5">
+    <div class="card shadow border-0" style="border-radius: 1rem;">
+        <div class="card-header bg-light py-3">
+            <h4 class="mb-0">Financial Report</h4>
+        </div>
+        <div class="card-body p-4">
+            <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light rounded">
+                <div class="col-md-4">
+                    <label for="id_start_date" class="form-label">Start Date</label>
+                    {{ form.start_date }}
+                </div>
+                <div class="col-md-4">
+                    <label for="id_end_date" class="form-label">End Date</label>
+                    {{ form.end_date }}
+                </div>
+                <div class="col-md-2 align-self-end">
+                    <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                </div>
+                <div class="col-md-2 align-self-end">
+                    <a href="{% url 'reports:export_financial_excel' %}" class="btn btn-success w-100">
+                        <i class="bi bi-file-earmark-excel"></i> Export
+                    </a>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Car</th>
+                            <th>Model</th>
+                            <th>Plate</th>
+                            <th>LPO</th>
+                            <th>Claim No</th>
+                            <th class="text-end">Deal</th>
+                            <th class="text-end">VAT (5%)</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in report_jobs %}
+                        <tr>
+                            <td>{{ job.car.brand }}</td>
+                            <td>{{ job.car.model }}</td>
+                            <td>{{ job.car.plate_number }}</td>
+                            <td>{% if job.lpo_confirmed %}YES{% else %}NO{% endif %}</td>
+                            <td>{{ job.car.claim_number }}</td>
+                            <td class="text-end">{{ job.deal|floatformat:2 }}</td>
+                            <td class="text-end">{{ job.vat|floatformat:2 }}</td>
+                            <td class="text-end">{{ job.total|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">No data found for the selected criteria.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-dark">
+                            <td colspan="5" class="text-end fw-bold">Grand Total:</td>
+                            <td class="text-end fw-bold">{{ grand_total_deal|floatformat:2 }}</td>
+                            <td class="text-end fw-bold">{{ grand_total_vat|floatformat:2 }}</td>
+                            <td class="text-end fw-bold">{{ grand_total_final|floatformat:2 }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -14,11 +14,12 @@ class Car(models.Model):
     ]
 
     brand = models.CharField(max_length=50, verbose_name="Brand")
+    model =models.CharField(max_length=50, verbose_name="Model", default='N/A')
+    car_picture = models.ImageField(upload_to='cars/', null=True, blank=True,verbose_name="Car Picture")
     plate_number = models.CharField(max_length=20, unique=True, verbose_name="Plate Number")
     color = models.CharField(max_length=20, verbose_name="Color")
     year = models.IntegerField(verbose_name="Year Manufactured")
     claim_number = models.CharField(max_length=50, verbose_name="Claim Number", default='No Claim')
-    estimate_number = models.CharField(max_length=50, verbose_name="Estimate Number", default='N/A')
     registered_at = models.DateTimeField(default=timezone.now, verbose_name="Time Registered")
     registered_by = models.ForeignKey(User,on_delete=models.SET_NULL, null=True,blank=True,verbose_name="Registered By")   
     estimated_cost = models.CharField(
@@ -35,11 +36,13 @@ class RepairJob(models.Model):
     """Tracks a single repair process for a car from start to finish."""
     class Stage(models.TextChoices):
         PENDING_EXPERT = 'pending_expert', "Pending for Expert"
+        QUOTATION = 'quotation', "Quotation" 
         PENDING_APPROVAL = 'pending_approval', "Pending Approval"
         PENDING_START = 'pending_start', "Pending to Start"
         PENDING_PART = 'pending_part', "Pending Part"
         WORKING = 'working', "Working"
-        READY_EXIT = 'ready_exit', "Ready for Exit"
+        READY_TOEXIT = 'ready_exit', "Ready To Exit" 
+        EXIT = 'exit', "Exit (Awaiting LPO)" 
         ARCHIVED = 'archived', "Archived"
 
     # --- Core Information ---
@@ -60,7 +63,8 @@ class RepairJob(models.Model):
     timer_end_time = models.DateTimeField(null=True, blank=True, verbose_name="Timer End Time")
     # --- Finalization ---
     lpo_confirmed = models.BooleanField(default=False, verbose_name="LPO Confirmed")
-
+    sign_confirmed = models.BooleanField(default=False, verbose_name="Sign Confirmed")
+    
     def __str__(self):
         return f"Job for {self.car} - {self.get_status_display()}"
 
@@ -74,3 +78,28 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.name} for Job #{self.repair_job.id}"
+
+class QuotationItem(models.Model):
+    """
+    The single, definitive model for an item in a quotation.
+    """
+    repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="quotation_items")
+    name = models.CharField(max_length=200, verbose_name="Item Name")
+    picture = models.ImageField(upload_to="quotations/", null=True, blank=True, verbose_name="Item Picture")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Estimated Price")
+
+    def __str__(self):
+        return f"Quote Item: {self.name} for Job #{self.repair_job.id}"
+class PurchasedPart(models.Model):
+    """
+    Represents an ACTUAL part that was purchased for the job.
+    This is the REAL cost.
+    """
+    repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="purchased_parts")
+    name = models.CharField(max_length=200, verbose_name="Part Name")
+    invoice_picture = models.ImageField(upload_to="invoices/", null=True, blank=True, verbose_name="Invoice/Receipt Picture")
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Actual Price Paid")
+    purchased_on = models.DateField(verbose_name="Date Purchased")
+
+    def __str__(self):
+        return f"Purchased: {self.name} for Job #{self.repair_job.id}"
