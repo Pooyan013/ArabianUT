@@ -90,6 +90,8 @@ class QuotationItem(models.Model):
 
     def __str__(self):
         return f"Quote Item: {self.name} for Job #{self.repair_job.id}"
+    
+    
 class PurchasedPart(models.Model):
     """
     Represents an ACTUAL part that was purchased for the job.

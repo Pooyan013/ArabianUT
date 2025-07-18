@@ -37,44 +37,34 @@
                 </div>
             </div>
 
-            {% if job.status in "quotation,pending_approval,pending_start,pending_part,working" %}
+            {% if job.status in "pending_part,working,ready_to_exit,exit,archived" %}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Part Management</h5>
+                    <h5 class="mb-0">Purchased Part Management</h5>
                 </div>
                 <div class="card-body">
-                    <h6>Add Required Part</h6>
+                    <h6>Log a Purchased Part</h6>
                     <form method="post" enctype="multipart/form-data" class="mb-4">
-                        {{ part_form.as_p }}
                         {% csrf_token %}
-
-                        <button type="submit" name="add_part" class="btn btn-info w-100 mt-2">Add Part</button>
+                        {{ purchased_part_form.as_p }}
+                        <button type="submit" name="add_purchased_part" class="btn btn-info w-100 mt-2">Log
+                            Part</button>
                     </form>
                     <hr>
-                    <h6>Required Parts List</h6>
+                    <h6>Logged Parts List</h6>
                     <ul class="list-group">
-                        {% for part in parts %}
+                        {% for part in purchased_parts %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>{{ part.name }} ({{ part.price|floatformat:2 }})</span>
-                            <div>
-                                {% if part.is_bought %}
-                                <span class="badge bg-success">Bought</span>
-                                {% else %}
-                                <form action="{% url 'core:mark_part_as_bought' part.id %}" method="post"
-                                    class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-success">Buy</button>
-                                </form>
-                                {% endif %}
-                                <form action="{% url 'core:delete_part' part.id %}" method="post" class="d-inline ms-1">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Are you sure?');"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </div>
+                            <span>{{ part.name }} ({{ part.final_price|floatformat:2 }})</span>
+                            <form action="{% url 'core:delete_purchased_part' part.id %}" method="post"
+                                class="d-inline ms-1">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Are you sure?');"><i class="bi bi-trash"></i></button>
+                            </form>
                         </li>
                         {% empty %}
-                        <li class="list-group-item">No parts added yet.</li>
+                        <li class="list-group-item">No parts logged yet.</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -105,36 +95,34 @@
                     </div>
                     {% endif %}
 
-                    {# --- Stage: Quotation --- #}
                     {% if job.status == 'quotation' %}
                     <div class="p-2">
                         <h5>Quotation Stage</h5>
-                        <p>Add the required items for the pro-forma invoice. This data will be used for the PDF export.
-                        </p>
-
+                        <p>Add items for the pro-forma invoice. This data will be used for the PDF export.</p>
                         <form method="post" enctype="multipart/form-data" class="mb-4 border p-3 rounded">
                             <h6>Add Quotation Item</h6>
                             {% csrf_token %}
                             {{ quotation_item_form.as_p }}
                             <button type="submit" name="add_quotation_item" class="btn btn-info mt-2">Add Item</button>
                         </form>
-
                         <h6>Quotation Items List</h6>
                         <ul class="list-group mb-4">
                             {% for item in quotation_items %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>{{ item.name }} ({{ item.price|floatformat:2 }})</span>
-                                <a href="#">Delete</a>
+                                <form action="{% url 'core:delete_quotation_item' item.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Are you sure?');">Delete</button>
+                                </form>
                             </li>
                             {% empty %}
                             <li class="list-group-item">No items added yet.</li>
                             {% endfor %}
                         </ul>
-
                         <div class="text-center mt-4 d-flex justify-content-center gap-2">
-                            <a href="{% url 'core:quotation_pdf' job.id %}" target="_blank" class="btn btn-secondary">
-                                <i class="bi bi-file-earmark-pdf"></i> Download PDF
-                            </a>
+                            <a href="{% url 'core:quotation_pdf' job.id %}" target="_blank" class="btn btn-secondary"><i
+                                    class="bi bi-file-earmark-pdf"></i> Download PDF</a>
                             <form action="{% url 'core:update_job_status' job.id 'pending_approval' %}" method="post">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-success">Finalize & Proceed</button>
@@ -194,8 +182,10 @@
                     <div class="text-center p-4">
                         <h5>Ready for Delivery</h5>
                         <p>The car is repaired and ready for customer pickup.</p>
-                        <form action="{% url 'core:update_job_status' job.id 'exit' %}" method="post">{% csrf_token
-                            %}<button type="submit" class="btn btn-primary">Proceed to Finalization</button></form>
+                        <form action="{% url 'core:update_job_status' job.id 'exit' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Proceed to Finalization</button>
+                        </form>
                     </div>
                     {% endif %}
 
@@ -228,60 +218,4 @@
 {% endblock content %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Check if we are in the quotation stage
-        const addBtn = document.getElementById('js-add-item-btn');
-        if (addBtn) {
-            const nameInput = document.getElementById('js-item-name');
-            const priceInput = document.getElementById('js-item-price');
-            const itemsList = document.getElementById('js-quotation-list');
-            const pdfForm = document.getElementById('js-pdf-form');
-            const hiddenInput = document.getElementById('js-items-json');
-
-            let quotationItems = [];
-
-            const renderItems = () => {
-                itemsList.innerHTML = '';
-                if (quotationItems.length === 0) {
-                    itemsList.innerHTML = '<li class="list-group-item text-muted">No items added yet.</li>';
-                } else {
-                    quotationItems.forEach((item, index) => {
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                        li.innerHTML = `
-                        <span>${item.name} (${parseFloat(item.price).toFixed(2)})</span>
-                        <button class="btn btn-sm btn-danger" data-index="${index}">X</button>
-                    `;
-                        itemsList.appendChild(li);
-                    });
-                }
-            };
-
-            addBtn.addEventListener('click', () => {
-                const name = nameInput.value.trim();
-                const price = priceInput.value.trim();
-                if (name && price) {
-                    quotationItems.push({ name: name, price: price });
-                    nameInput.value = '';
-                    priceInput.value = '';
-                    nameInput.focus();
-                    renderItems();
-                }
-            });
-
-            itemsList.addEventListener('click', (e) => {
-                if (e.target && e.target.tagName === 'BUTTON') {
-                    const index = e.target.dataset.index;
-                    quotationItems.splice(index, 1);
-                    renderItems();
-                }
-            });
-
-            pdfForm.addEventListener('submit', () => {
-                hiddenInput.value = JSON.stringify(quotationItems);
-            });
-        }
-    });
-</script>
 {% endblock scripts %}

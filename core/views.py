@@ -59,7 +59,7 @@ def car_management_view(request):
         'jobs': jobs,
         'filter_form': filter_form, 
     }
-    return render(request, 'core/car_management.html', context)
+    return render(request, 'core/cars.html', context)
 
 # --- Job Detail & Workflow View ---
 @login_required
@@ -196,9 +196,7 @@ def generate_quotation_pdf(request, job_id):
     """
     job = get_object_or_404(RepairJob, id=job_id)
     
-    # Get items directly from the database, not from a POST request
     items = QuotationItem.objects.filter(repair_job=job)
-    
     total_price = sum(item.price for item in items)
     
     template_path = 'reports/quotation_pdf.html'
@@ -207,13 +205,13 @@ def generate_quotation_pdf(request, job_id):
         'items': items,
         'total_price': total_price,
     }
-    
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}.pdf"'
     
     template = get_template(template_path)
     html = template.render(context)
-    
+    print(html)
+
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
        return HttpResponse('We had some errors creating the PDF.')

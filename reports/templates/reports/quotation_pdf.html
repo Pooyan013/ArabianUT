@@ -3,54 +3,82 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Quotation</title>
+    <title>Quotation for {{ job.car.plate_number }}</title>
     <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.5cm;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: "Helvetica", sans-serif;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
 
         th,
         td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
         }
 
         th {
             background-color: #f2f2f2;
         }
+
+        tfoot td {
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
+
     <h1>Quotation for {{ job.car.brand }} {{ job.car.model }} ({{ job.car.plate_number }})</h1>
     <p><strong>Claim Number:</strong> {{ job.car.claim_number }}</p>
     <hr>
     <h3>Required Parts</h3>
+
     <table>
         <thead>
             <tr>
-                <th>Part Name</th>
+                <th>Item Name</th>
                 <th style="text-align: right;">Price</th>
             </tr>
         </thead>
         <tbody>
-            {% for part in parts %}
+            {# This is the most important part. The loop MUST be over "items" #}
+            {% for item in items %}
             <tr>
-                <td>{{ part.name }}</td>
-                <td style="text-align: right;">{{ part.price|floatformat:2 }}</td>
+                <td>{{ item.name }}</td>
+                <td style="text-align: right;">{{ item.price|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="2">No parts listed.</td>
+                <td colspan="2" style="text-align: center;">No items listed.</td>
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td style="text-align: right;"><strong>Total:</strong></td>
+                <td style="text-align: right;"><strong>{{ total_price|floatformat:2 }}</strong></td>
+            </tr>
+        </tfoot>
     </table>
+
 </body>
 
 </html>
