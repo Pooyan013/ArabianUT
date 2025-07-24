@@ -41,8 +41,10 @@ class RepairJob(models.Model):
         PENDING_START = 'pending_start', "Pending to Start"
         PENDING_PART = 'pending_part', "Pending Part"
         WORKING = 'working', "Working"
-        READY_TOEXIT = 'ready_exit', "Ready To Exit" 
+        READY_TOEXIT = 'ready_exit', "Ready To Exit"
+        SIGN = 'sign', "Waiting For Sign" 
         EXIT = 'exit', "Exit (Awaiting LPO)" 
+        PAIED = 'paied', "Waiting For Pay"
         ARCHIVED = 'archived', "Archived"
 
     # --- Core Information ---
@@ -61,6 +63,8 @@ class RepairJob(models.Model):
     exited_at = models.DateTimeField(null=True, blank=True, verbose_name="Time of Exit")
     timer_start_time = models.DateTimeField(null=True, blank=True, verbose_name="Timer Start Time")
     timer_end_time = models.DateTimeField(null=True, blank=True, verbose_name="Timer End Time")
+    timer_paused_at = models.DateTimeField(null=True, blank=True, verbose_name="Timer Paused At")
+
     # --- Finalization ---
     lpo_confirmed = models.BooleanField(default=False, verbose_name="LPO Confirmed")
     sign_confirmed = models.BooleanField(default=False, verbose_name="Sign Confirmed")
@@ -73,7 +77,7 @@ class Part(models.Model):
     repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="parts", verbose_name="Repair Job")
     name = models.CharField(max_length=200, verbose_name="Part Name")
     picture = models.ImageField(upload_to="parts/", verbose_name="Part Picture", null=True, blank=True)
-    price = models.FloatField(max_length=50, verbose_name="PartPrice", default= 10.0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Part Price", default=10.00)
     is_bought = models.BooleanField(default=False, verbose_name="Is Bought?")
 
     def __str__(self):
@@ -91,17 +95,3 @@ class QuotationItem(models.Model):
     def __str__(self):
         return f"Quote Item: {self.name} for Job #{self.repair_job.id}"
     
-    
-class PurchasedPart(models.Model):
-    """
-    Represents an ACTUAL part that was purchased for the job.
-    This is the REAL cost.
-    """
-    repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="purchased_parts")
-    name = models.CharField(max_length=200, verbose_name="Part Name")
-    invoice_picture = models.ImageField(upload_to="invoices/", null=True, blank=True, verbose_name="Invoice/Receipt Picture")
-    final_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Actual Price Paid")
-    purchased_on = models.DateField(verbose_name="Date Purchased")
-
-    def __str__(self):
-        return f"Purchased: {self.name} for Job #{self.repair_job.id}"

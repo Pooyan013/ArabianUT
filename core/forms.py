@@ -1,5 +1,5 @@
 from django import forms
-from .models import Car, RepairJob, QuotationItem, PurchasedPart
+from .models import Car, RepairJob, QuotationItem, Part
 
 class CarRegistrationForm(forms.ModelForm):
     """Form for registering a new car."""
@@ -46,16 +46,22 @@ class QuotationItemForm(forms.ModelForm):
             'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'price': forms.NumberInput(attrs={'class': 'form-control'}),
         }
-
-class FinalConfirmationForm(forms.ModelForm):
-    """Form for final LPO and Signature confirmation."""
+class LpoConfirmationForm(forms.ModelForm):
+    """Form for final LPO  confirmation."""
     class Meta:
         model = RepairJob
-        fields = ['lpo_confirmed', 'sign_confirmed']
+        fields = ['lpo_confirmed']
         labels = {
             'lpo_confirmed': 'I confirm the LPO is positive.',
-            'sign_confirmed': 'I confirm the customer signature is received.',
         }
+class SignConfirmationForm(forms.ModelForm):
+        """Form for  Signature confirmation."""
+        class Meta:
+            model = RepairJob
+            fields = ['sign_confirmed']
+            labels = {
+                'sign_confirmed': 'I confirm the customer signature is received.',
+            }
 
 class JobFilterForm(forms.Form):
     """Form for filtering the list of repair jobs."""
@@ -77,26 +83,17 @@ class JobFilterForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-class PurchasedPartForm(forms.ModelForm):
-    """
-    A form for logging the details of an actual part that has been purchased.
-    """
+class PartItemForm(forms.ModelForm):
     class Meta:
-        model = PurchasedPart
-        fields = ['name', 'final_price', 'purchased_on', 'invoice_picture']
+        model = Part
+        fields = ['name', 'picture', 'price',]
         labels = {
-            'name': 'Part Name',
-            'final_price': 'Actual Price Paid',
-            'purchased_on': 'Date Purchased',
-            'invoice_picture': 'Invoice/Receipt Picture (Optional)',
+            'name': 'Item/Part Name',
+            'picture': 'Picture (Optional)',
+            'price': 'Estimated Price',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'final_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'purchased_on': forms.DateInput(
-                attrs={'class': 'form-control', 'type': 'date'}
-            ),
-            'invoice_picture': forms.ClearableFileInput(
-                attrs={'class': 'form-control'}
-            ),
+            'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control'}),
         }

@@ -5,18 +5,18 @@ from django.utils import timezone
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from datetime import timedelta
-import json
 from decimal import Decimal
 
-# Import all your final models and forms
-from .models import Car, RepairJob, QuotationItem, PurchasedPart
+# Import all the final, correct models and forms
+from .models import Car, RepairJob, Part, QuotationItem
 from .forms import (
     CarRegistrationForm, 
     JobFilterForm, 
     DealUpdateForm, 
-    QuotationItemForm,
-    PurchasedPartForm,
-    FinalConfirmationForm
+    PartItemForm,
+    QuotationItemForm, 
+    SignConfirmationForm,
+    LpoConfirmationForm
 )
 
 # --- Main/Home View ---
@@ -64,13 +64,12 @@ def car_management_view(request):
 # --- Job Detail & Workflow View ---
 @login_required
 def job_detail_view(request, job_id):
-    """Displays details for a single job and handles all related forms."""
     job = get_object_or_404(RepairJob, id=job_id)
-    quotation_items = QuotationItem.objects.filter(repair_job=job)
-    purchased_parts = PurchasedPart.objects.filter(repair_job=job)
+    parts = Part.objects.filter(repair_job=job)
+    quotation_items = QuotationItem.objects.filter(repair_job=job) # Added query
 
     if request.method == 'POST':
-        # Determine which form was submitted and process it
+        # --- START: Added logic for QuotationItemForm ---
         if 'add_quotation_item' in request.POST:
             form = QuotationItemForm(request.POST, request.FILES)
             if form.is_valid():
@@ -78,43 +77,85 @@ def job_detail_view(request, job_id):
                 item.repair_job = job
                 item.save()
                 messages.success(request, 'Quotation item added.')
-        elif 'add_purchased_part' in request.POST:
-            form = PurchasedPartForm(request.POST, request.FILES)
+        # --- END: Added logic ---
+        elif 'add_part' in request.POST:
+            form = PartItemForm(request.POST, request.FILES)
             if form.is_valid():
                 part = form.save(commit=False)
                 part.repair_job = job
                 part.save()
-                messages.success(request, 'Purchased part logged.')
+                messages.success(request, 'Part added successfully.')
         elif 'update_deal' in request.POST:
             form = DealUpdateForm(request.POST, instance=job)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Deal amount updated.')
-        elif 'confirm_final' in request.POST:
-            form = FinalConfirmationForm(request.POST, instance=job)
+        elif 'confirm_sign' in request.POST:
+            form = SignConfirmationForm(request.POST, instance=job)
             if form.is_valid():
-                updated_job = form.save()
-                if updated_job.lpo_confirmed and updated_job.sign_confirmed:
-                    updated_job.status = 'archived'
-                    updated_job.exited_at = timezone.now()
-                    updated_job.save()
-                    messages.success(request, 'Job confirmed and archived successfully!')
+                signed_job = form.save()
+                if signed_job.sign_confirmed:
+                    # Automatically move to the next stage after signing
+                    signed_job.status = 'exit'
+                    signed_job.save()
+                    messages.success(request, 'Signature confirmed. Proceeding to LPO confirmation.')
+                
+                return redirect('core:job_detail', job_id=job.id)
+
+        elif 'confirm_lpo' in request.POST:
+            form = LpoConfirmationForm(request.POST, instance=job)
+            if form.is_valid():
+                lpo_job = form.save()
+                if lpo_job.lpo_confirmed:
+                    # Archive the job after LPO is confirmed
+                    lpo_job.status = 'archived'
+                    lpo_job.exited_at = timezone.now()
+                    lpo_job.save()
+                    messages.success(request, 'LPO confirmed and job archived.')
                 else:
-                    messages.warning(request, 'Both LPO and Signature must be confirmed to archive.')
+                    messages.warning(request, 'LPO must be confirmed to archive the job.')
+
+                return redirect('core:job_detail', job_id=job.id)
         
         return redirect('core:job_detail', job_id=job.id)
 
     # For GET requests, create instances of all forms
     context = {
         'job': job,
-        'quotation_items': quotation_items,
-        'purchased_parts': purchased_parts,
-        'quotation_item_form': QuotationItemForm(),
-        'purchased_part_form': PurchasedPartForm(),
+        'parts': parts,
+        'quotation_items': quotation_items, 
+        'part_form': PartItemForm(),
+        'quotation_item_form': QuotationItemForm(), 
         'deal_form': DealUpdateForm(instance=job),
-        'final_form': FinalConfirmationForm(instance=job),
+        'sign_form': SignConfirmationForm(instance=job),
+        'lpo_form': LpoConfirmationForm(instance=job),
     }
     return render(request, 'core/job_detail.html', context)
+
+@login_required
+def pause_timer_view(request, job_id):
+    if request.method == 'POST':
+        job = get_object_or_404(RepairJob, id=job_id)
+        if job.timer_start_time and not job.timer_paused_at:
+            job.timer_paused_at = timezone.now()
+            job.save()
+            messages.info(request, 'Timer has been paused.')
+    return redirect('core:job_detail', job_id=job_id)
+
+@login_required
+def resume_timer_view(request, job_id):
+    if request.method == 'POST':
+        job = get_object_or_404(RepairJob, id=job_id)
+        if job.timer_paused_at and job.timer_end_time:
+            pause_duration = timezone.now() - job.timer_paused_at
+            
+            job.timer_end_time += pause_duration
+            
+            job.timer_paused_at = None
+            job.save()
+            messages.info(request, 'Timer has been resumed.')
+    return redirect('core:job_detail', job_id=job_id)
+
 
 # --- Status & Data Update Views ---
 @login_required
@@ -128,24 +169,32 @@ def update_job_status_view(request, job_id, next_status):
         if next_status == 'quotation' and current_status == 'pending_expert':
             job.status = 'quotation'
             job.expert_inspected_at = timezone.now()
+        
         elif next_status == 'pending_approval' and current_status == 'quotation':
             job.status = 'pending_approval'
+        
         elif next_status == 'pending_start' and current_status == 'pending_approval':
             job.status = 'pending_start'
             job.approved_at = timezone.now()
-            duration_map = {'nodamage': 1, 'cheap': 4, 'lite': 7, 'mid': 10, 'heavy': 14}
-            days = duration_map.get(job.car.estimated_cost, 10)
-            job.timer_start_time = timezone.now()
-            job.timer_end_time = job.timer_start_time + timedelta(days=days)
+        
         elif next_status == 'pending_part':
             job.status = 'pending_part'
             job.parts_pending_at = timezone.now()
+        
         elif next_status == 'working':
             job.status = 'working'
             job.work_started_at = timezone.now()
+            
+            if not job.timer_start_time:
+                duration_map = {'nodamage': 2, 'cheap': 4, 'lite': 7, 'mid': 14, 'heavy': 21}
+                days = duration_map.get(job.car.estimated_cost, 10)
+                job.timer_start_time = timezone.now() 
+                job.timer_end_time = job.timer_start_time + timedelta(days=days)
+
         elif next_status == 'ready_to_exit' and current_status == 'working':
             job.status = 'ready_to_exit'
             job.work_finished_at = timezone.now()
+        
         elif next_status == 'exit' and current_status == 'ready_to_exit':
             job.status = 'exit'
         
@@ -170,7 +219,17 @@ def edit_car_view(request, car_id):
     context = {'form': form, 'car': car}
     return render(request, 'core/edit_car.html', context)
 
-# --- Views for Quotation Items and Purchased Parts ---
+@login_required
+def delete_part_view(request, part_id):
+    """Deletes a part from a repair job."""
+    part = get_object_or_404(Part, id=part_id)
+    job_id = part.repair_job.id
+    if request.method == 'POST':
+        part.delete()
+        messages.success(request, f'Part "{part.name}" was deleted successfully.')
+    return redirect('core:job_detail', job_id=job_id)
+
+# --- START: New View for Deleting Quotation Items ---
 @login_required
 def delete_quotation_item_view(request, item_id):
     item = get_object_or_404(QuotationItem, id=item_id)
@@ -179,40 +238,36 @@ def delete_quotation_item_view(request, item_id):
         item.delete()
         messages.success(request, f'Item "{item.name}" deleted from quotation.')
     return redirect('core:job_detail', job_id=job_id)
+# --- END: New View ---
 
 @login_required
-def delete_purchased_part_view(request, part_id):
-    part = get_object_or_404(PurchasedPart, id=part_id)
-    job_id = part.repair_job.id
+def mark_part_as_bought_view(request, part_id):
+    """Marks a part as having been bought."""
+    part = get_object_or_404(Part, id=part_id)
     if request.method == 'POST':
-        part.delete()
-        messages.success(request, f'Purchased part "{part.name}" deleted.')
-    return redirect('core:job_detail', job_id=job_id)
+        part.is_bought = not part.is_bought
+        part.save()
+        status = "bought" if part.is_bought else "not bought"
+        messages.success(request, f'Part "{part.name}" marked as {status}.')
+    return redirect('core:job_detail', job_id=part.repair_job.id)
 
 @login_required
 def generate_quotation_pdf(request, job_id):
-    """
-    Generates a PDF by fetching QuotationItem objects directly from the database.
-    """
+    """Generates a PDF from database QuotationItem objects."""
     job = get_object_or_404(RepairJob, id=job_id)
-    
-    items = QuotationItem.objects.filter(repair_job=job)
+    items = QuotationItem.objects.filter(repair_job=job) 
     total_price = sum(item.price for item in items)
     
     template_path = 'reports/quotation_pdf.html'
-    context = {
-        'job': job,
-        'items': items,
-        'total_price': total_price,
-    }
+    context = {'job': job, 'items': items, 'total_price': total_price}
+    
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}.pdf"'
     
     template = get_template(template_path)
     html = template.render(context)
-    print(html)
-
+    
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
-       return HttpResponse('We had some errors creating the PDF.')
+        return HttpResponse('We had some errors creating the PDF.')
     return response
