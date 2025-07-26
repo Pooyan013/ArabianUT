@@ -6,29 +6,33 @@ from .models import UserProfile
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-
-
+from django.core.exceptions import ObjectDoesNotExist
 
 @login_required
 @transaction.atomic
 def edit_profile(request):
+    try:
+        profile = request.user.userprofile
+    except ObjectDoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+
     if request.method == 'POST':
         user_form = UserUpdateForm(request.POST, instance=request.user)
-        profile_form = ProfileUpdateForm(request.POST, instance=request.user.userprofile)
+        profile_form = ProfileUpdateForm(request.POST, instance=profile)
 
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
             profile_form.save()
-            messages.success(request, 'Your Profile Updated Succesfully!')
-            return redirect('accounts:edit_profile') 
+            messages.success(request, 'Your profile was successfully updated!')
+            return redirect('accounts:edit_profile')
         else:
-            messages.error(request, "Please fill Correctly")
+            messages.error(request, 'Please correct the error below.')
     else:
         user_form = UserUpdateForm(instance=request.user)
-        profile_form = ProfileUpdateForm(instance=request.user.userprofile)
+        profile_form = ProfileUpdateForm(instance=profile)
 
     context = {
         'user_form': user_form,
-        'profile_form': profile_form
+        'profile_form': profile_form,
     }
     return render(request, 'accounts/profile.html', context)

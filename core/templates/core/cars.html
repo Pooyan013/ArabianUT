@@ -54,9 +54,11 @@
     <div class="card shadow border-0" style="border-radius: 1rem;">
         <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0">Active Repair Jobs</h4>
+            {% if perms.core.add_car %}
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCarModal">
                 Register New Car <i class="bi bi-plus-circle me-2"></i>
             </button>
+            {% endif %}
         </div>
 
         <div class="card-body p-4">

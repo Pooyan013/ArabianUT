@@ -6,6 +6,8 @@ from django.template.loader import get_template
 from xhtml2pdf import pisa
 from datetime import timedelta
 from decimal import Decimal
+from django.contrib.auth.decorators import permission_required
+
 
 # Import all the final, correct models and forms
 from .models import Car, RepairJob, Part, QuotationItem
@@ -43,17 +45,21 @@ def car_management_view(request):
             jobs = jobs.filter(car__estimated_cost=estimated_cost)
 
     if request.method == 'POST':
-        form = CarRegistrationForm(request.POST, request.FILES)
-        if form.is_valid():
-            new_car = form.save(commit=False)
-            new_car.registered_by = request.user
-            new_car.save()
-            RepairJob.objects.create(car=new_car)
-            messages.success(request, f'Car with plate number {new_car.plate_number} was successfully registered.')
+        if request.user.has_perm('core.add_car'):
+            form = CarRegistrationForm(request.POST, request.FILES)
+            if form.is_valid():
+                new_car = form.save(commit=False)
+                new_car.registered_by = request.user
+                new_car.save()
+                RepairJob.objects.create(car=new_car)
+                messages.success(request, f'Car with plate number {new_car.plate_number} was successfully registered.')
+                return redirect('core:car_list')
+        else:
+            messages.error(request, 'You do not have permission to add a new car.')
             return redirect('core:car_list')
     else:
         form = CarRegistrationForm()
-    
+
     context = {
         'form': form,
         'jobs': jobs,

@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+
+{% block title %}Reports{% endblock title %}
+
+{% block content %}
+<div class="container-lg my-5">
+    <div class="card shadow border-0" style="border-radius: 1rem;">
+        <div class="card-header bg-light py-3">
+
+            <ul class="nav nav-pills">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'operational' %}active{% endif %}"
+                        href="{% url 'reports:operational_report' %}">Operational Report</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'financial' %}active{% endif %}"
+                        href="{% url 'reports:financial_report' %}">Financial Report</a>
+                </li>
+            </ul>
+
+        </div>
+        <div class="card-body p-4">
+            {% block report_content %}
+            {% endblock report_content %}
+        </div>
+    </div>
+</div>
+{% endblock content %}
