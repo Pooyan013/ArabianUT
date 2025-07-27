@@ -72,6 +72,10 @@ class JobFilterForm(forms.Form):
         required=False, 
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Plate Number'})
     )
+    car_brand = forms.CharField(
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CarBrand'})
+    )
     status = forms.ChoiceField(
         choices=STATUS_CHOICES, 
         required=False, 

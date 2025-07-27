@@ -18,7 +18,7 @@ from .forms import (
     PartItemForm,
     QuotationItemForm, 
     SignConfirmationForm,
-    LpoConfirmationForm
+    LpoConfirmationForm,
 )
 
 # --- Main/Home View ---
@@ -37,12 +37,15 @@ def car_management_view(request):
         status = filter_form.cleaned_data.get('status')
         plate_number = filter_form.cleaned_data.get('plate_number')
         estimated_cost = filter_form.cleaned_data.get('estimated_cost')
+        car_brand = filter_form.cleaned_data.get('car_brand')
         if status:
             jobs = jobs.filter(status=status)
         if plate_number:
             jobs = jobs.filter(car__plate_number__icontains=plate_number)
         if estimated_cost:
             jobs = jobs.filter(car__estimated_cost=estimated_cost)
+        if car_brand:
+            jobs = jobs.filter(car__brand__icontains=car_brand)
 
     if request.method == 'POST':
         if request.user.has_perm('core.add_car'):

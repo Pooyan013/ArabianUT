@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from itertools import chain
 from operator import attrgetter
-from .models import Income, Expense
-from .forms import IncomeForm, ExpenseForm
+from .models import Income, Expense, Attendance
+from .forms import IncomeForm, ExpenseForm ,AttendanceForm
 
 @login_required
 def accounting_dashboard_view(request):
@@ -54,3 +54,4 @@ def accounting_dashboard_view(request):
         'transactions': all_transactions,
     }
     return render(request, 'accounting/dashboard.html', context)
+

@@ -6,6 +6,7 @@ from .forms import DateRangeFilterForm
 import openpyxl
 from django.http import HttpResponse
 from openpyxl.utils import get_column_letter
+from accounting.models import SalarySlip, Expense, Attendance
 
 @login_required
 def operational_report_view(request):
@@ -149,3 +150,47 @@ def export_financial_report_excel(request):
     workbook.save(response)
     
     return response
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from accounting.models import SalarySlip, Attendance 
+from .forms import DateRangeFilterForm
+
+@login_required
+def payroll_report_view(request):
+    form = DateRangeFilterForm(request.GET or None)
+    slips = SalarySlip.objects.select_related('employee').all().order_by('-pay_period_end')
+
+    if form.is_valid():
+        start_date = form.cleaned_data.get('start_date')
+        end_date = form.cleaned_data.get('end_date')
+        if start_date:
+            slips = slips.filter(pay_period_end__gte=start_date)
+        if end_date:
+            slips = slips.filter(pay_period_end__lte=end_date)
+            
+    # --- START: منطق جدید برای خواندن جزئیات هزینه‌ها ---
+    for slip in slips:
+        # شمارش غیبت‌ها
+        slip.absence_count = Attendance.objects.filter(
+            employee=slip.employee,
+            date__range=(slip.pay_period_start, slip.pay_period_end)
+        ).count()
+        
+        # گرفتن لیست تمام هزینه‌های شخصی در این دوره حقوقی
+        slip.personal_expenses = Expense.objects.filter(
+            employee=slip.employee,
+            expense_type='personal',
+            transaction_date__range=(slip.pay_period_start, slip.pay_period_end)
+        )
+    # --- END: منطق جدید ---
+
+    total_cost_sum = sum(slip.cost for slip in slips)
+
+    context = {
+        'form': form,
+        'salary_slips': slips,
+        'total_cost_sum': total_cost_sum,
+        'active_page': 'payroll',
+    }
+    return render(request, 'reports/payroll_report.html', context)
