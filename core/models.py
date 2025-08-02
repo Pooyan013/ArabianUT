@@ -3,6 +3,19 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.models import User
 
+
+class Owner(models.Model):
+    first_name = models.CharField(max_length=50, verbose_name="First Name")
+    last_name = models.CharField(max_length=50, verbose_name="Last Name")
+    phone_number = models.CharField(max_length=30, verbose_name="Phone Number")
+    vin_number = models.CharField(max_length=25, verbose_name="VIN Number", unique=True)
+    class Meta:
+        verbose_name = "Owner"
+        verbose_name_plural = "Owners"
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+    
 class Car(models.Model):
     """Stores permanent information about a physical car."""
     ESTIMATE_COST_CHOICES = [
@@ -15,7 +28,8 @@ class Car(models.Model):
 
     brand = models.CharField(max_length=50, verbose_name="Brand")
     model =models.CharField(max_length=50, verbose_name="Model", default='N/A')
-    car_picture = models.ImageField(upload_to='cars/', null=True, blank=True,verbose_name="Car Picture")
+    image = models.ImageField(upload_to='car_pictures/', null=True, blank=True)
+    owner = models.ForeignKey(Owner, on_delete=models.CASCADE, default=1 ,related_name='cars')
     plate_number = models.CharField(max_length=20, unique=True, verbose_name="Plate Number")
     color = models.CharField(max_length=20, verbose_name="Color")
     year = models.IntegerField(verbose_name="Year Manufactured")
@@ -31,7 +45,6 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.brand} - {self.plate_number}"
-
 class RepairJob(models.Model):
     """Tracks a single repair process for a car from start to finish."""
     class Stage(models.TextChoices):

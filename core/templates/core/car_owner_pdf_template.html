@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Car and Owner Info</title>
+    <style>
+        body {
+            font-family: DejaVu Sans, sans-serif;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Car Information</h2>
+    <div class="section">
+        <p><span class="label">Brand:</span> {{ car.brand }}</p>
+        <p><span class="label">Model:</span> {{ car.model }}</p>
+        <p><span class="label">Plate Number:</span> {{ car.plate_number }}</p>
+        <p><span class="label">Color:</span> {{ car.color }}</p>
+        <p><span class="label">Year Manufactured:</span> {{ car.year }}</p>
+        <p><span class="label">Claim Number:</span> {{ car.claim_number }}</p>
+        <p><span class="label">Estimated Cost Level:</span> {{ car.get_estimated_cost_display }}</p>
+    </div>
+
+    <h2>Owner Information</h2>
+    <div class="section">
+        <p><span class="label">First Name:</span> {{ owner.first_name }}</p>
+        <p><span class="label">Last Name:</span> {{ owner.last_name }}</p>
+        <p><span class="label">Phone Number:</span> {{ owner.phone_number }}</p>
+        <p><span class="label">WIN/VIN Number:</span> {{ owner.win_number }}</p>
+    </div>
+</body>
+
+</html>

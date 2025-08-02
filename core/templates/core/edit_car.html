@@ -60,18 +60,16 @@
             <h2 class="text-center mb-4 fw-bold">Edit Car Information</h2>
             <h5 class="text-center text-white-50 mb-4">{{ car.brand }} - {{ car.plate_number }}</h5>
 
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                {% for field in form %}
-                <div class="form-floating mb-3">
-                    <label for="{{ field.id_for_label }}">{{ field.label }} :</label>
-                    {{ field }}
-                </div>
-                {% endfor %}
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                    <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
+                <h5>Car Details</h5>
+                {{ car_form.as_p }}
+
+                <h5>Owner Details</h5>
+                {{ owner_form.as_p }}
+
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="submit" name="generate_pdf" class="btn btn-secondary">Download PDF</button>
             </form>
         </div>
     </div>

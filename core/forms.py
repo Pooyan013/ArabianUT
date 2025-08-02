@@ -1,18 +1,21 @@
 from django import forms
-from .models import Car, RepairJob, QuotationItem, Part
+from .models import Car, RepairJob, QuotationItem, Part, Owner
 
 class CarRegistrationForm(forms.ModelForm):
-    """Form for registering a new car."""
     class Meta:
         model = Car
         fields = [
-            'brand', 'model', 'plate_number', 'color', 'year', 
-            'claim_number', 'estimated_cost', 'car_picture',
+            'brand', 'model', 'image','plate_number', 'color', 'year', 
+            'claim_number', 'estimated_cost',
         ]
         labels = {
-            'brand': 'Brand', 'model': 'Model', 'plate_number': 'Plate Number',
-            'color': 'Color', 'year': 'Year Manufactured', 'claim_number': 'Claim Number',
-            'estimated_cost': 'Estimated Cost Level', 'car_picture': 'Car Picture',
+            'brand': 'Brand',
+            'model': 'Model',
+            'plate_number': 'Plate Number',
+            'color': 'Color',
+            'year': 'Year Manufactured',
+            'claim_number': 'Claim Number',
+            'estimated_cost': 'Estimated Cost Level',
         }
 
     def __init__(self, *args, **kwargs):
@@ -21,6 +24,22 @@ class CarRegistrationForm(forms.ModelForm):
             widget_class = 'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
             field.widget.attrs.update({'class': widget_class})
 
+class OwnerForm(forms.ModelForm):
+    """Form for creating a new car owner."""
+    class Meta:
+        model = Owner
+        fields = ['first_name', 'last_name', 'phone_number', 'vin_number']
+        labels = {
+            'first_name': 'First Name',
+            'last_name': 'Last Name',
+            'phone_number': 'Phone Number',
+            'vin_number': 'WIN/VIN Number',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
 class DealUpdateForm(forms.ModelForm):
     """Form to update the deal amount for a repair job."""
     class Meta:
@@ -72,9 +91,9 @@ class JobFilterForm(forms.Form):
         required=False, 
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Plate Number'})
     )
-    car_brand = forms.CharField(
+    claim_number = forms.CharField(
         required=False, 
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CarBrand'})
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ClaimNumber'})
     )
     status = forms.ChoiceField(
         choices=STATUS_CHOICES, 

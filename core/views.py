@@ -7,7 +7,8 @@ from xhtml2pdf import pisa
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth.decorators import permission_required
-
+from django.template.loader import render_to_string
+import io
 
 # Import all the final, correct models and forms
 from .models import Car, RepairJob, Part, QuotationItem
@@ -19,6 +20,7 @@ from .forms import (
     QuotationItemForm, 
     SignConfirmationForm,
     LpoConfirmationForm,
+    OwnerForm,
 )
 
 # --- Main/Home View ---
@@ -29,44 +31,51 @@ def index(request):
 # --- Car & Job List View ---
 @login_required
 def car_management_view(request):
-    """Displays a list of jobs with filtering and handles new car registration."""
+    sort_field = request.GET.get('sort', '-car__registered_at')
+    allowed_sorts = ['plate_number', 'brand', 'model', 'claim_number', 'registered_at']
+    if sort_field.lstrip('-').split('__')[-1] not in allowed_sorts:
+        sort_field = '-car__registered_at'
+
     filter_form = JobFilterForm(request.GET)
-    jobs = RepairJob.objects.exclude(status='archived').select_related('car').order_by('-car__registered_at')
+    jobs = RepairJob.objects.exclude(status='archived').select_related('car').order_by(sort_field)
 
     if filter_form.is_valid():
         status = filter_form.cleaned_data.get('status')
         plate_number = filter_form.cleaned_data.get('plate_number')
         estimated_cost = filter_form.cleaned_data.get('estimated_cost')
-        car_brand = filter_form.cleaned_data.get('car_brand')
+        claim_number = filter_form.cleaned_data.get('claim_number')
         if status:
             jobs = jobs.filter(status=status)
         if plate_number:
             jobs = jobs.filter(car__plate_number__icontains=plate_number)
         if estimated_cost:
             jobs = jobs.filter(car__estimated_cost=estimated_cost)
-        if car_brand:
-            jobs = jobs.filter(car__brand__icontains=car_brand)
+        if claim_number:
+            jobs = jobs.filter(car__claim_number__icontains=claim_number)
 
     if request.method == 'POST':
-        if request.user.has_perm('core.add_car'):
-            form = CarRegistrationForm(request.POST, request.FILES)
-            if form.is_valid():
-                new_car = form.save(commit=False)
-                new_car.registered_by = request.user
-                new_car.save()
-                RepairJob.objects.create(car=new_car)
-                messages.success(request, f'Car with plate number {new_car.plate_number} was successfully registered.')
-                return redirect('core:car_list')
-        else:
-            messages.error(request, 'You do not have permission to add a new car.')
+        car_form = CarRegistrationForm(request.POST, request.FILES)
+        owner_form = OwnerForm(request.POST)
+
+        if car_form.is_valid() and owner_form.is_valid():
+            new_owner = owner_form.save()
+            new_car = car_form.save(commit=False)
+            new_car.owner = new_owner
+            new_car.registered_by = request.user
+            new_car.save()
+
+            RepairJob.objects.create(car=new_car)
+            messages.success(request, f'Car with plate number {new_car.plate_number} was successfully registered.')
             return redirect('core:car_list')
     else:
-        form = CarRegistrationForm()
+        car_form = CarRegistrationForm()
+        owner_form = OwnerForm()
 
     context = {
-        'form': form,
+        'car_form': car_form,
+        'owner_form': owner_form,
         'jobs': jobs,
-        'filter_form': filter_form, 
+        'filter_form': filter_form,
     }
     return render(request, 'core/cars.html', context)
 
@@ -214,19 +223,48 @@ def update_job_status_view(request, job_id, next_status):
 
 @login_required
 def edit_car_view(request, car_id):
-    """Handles editing the information of an existing car."""
+    """Handles editing car and owner info, and optionally generating a PDF."""
     car = get_object_or_404(Car, id=car_id)
+    owner = car.owner
+
     if request.method == 'POST':
-        form = CarRegistrationForm(request.POST, request.FILES, instance=car)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Car information updated successfully.')
-            latest_job = car.jobs.order_by('-registered_at').first()
+        car_form = CarRegistrationForm(request.POST, request.FILES, instance=car)
+        owner_form = OwnerForm(request.POST, instance=owner)
+
+        if car_form.is_valid() and owner_form.is_valid():
+            owner_instance = owner_form.save()  # ابتدا مالک را ذخیره کن
+            car_instance = car_form.save(commit=False)  # ماشین را ذخیره نکن فعلا
+            car_instance.owner = owner_instance       # مالک به ماشین اختصاص داده شود
+            car_instance.save()                        # ماشین را ذخیره کن
+
+            messages.success(request, 'Car and owner information updated successfully.')
+
+            if 'generate_pdf' in request.POST:
+                html_string = render_to_string('core/car_owner_pdf_template.html', {
+                    'car': car_instance,
+                    'owner': owner_instance,
+                })
+                result = io.BytesIO()
+                pdf = pisa.CreatePDF(io.BytesIO(html_string.encode('utf-8')), dest=result)
+                if pdf.err:
+                    return HttpResponse('Error generating PDF', status=500)
+                response = HttpResponse(result.getvalue(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename=car_{car_instance.plate_number}_owner.pdf'
+                return response
+
+            latest_job = car_instance.jobs.order_by('-registered_at').first()
             return redirect('core:job_detail', job_id=latest_job.id) if latest_job else redirect('core:car_list')
     else:
-        form = CarRegistrationForm(instance=car)
-    context = {'form': form, 'car': car}
+        car_form = CarRegistrationForm(instance=car)
+        owner_form = OwnerForm(instance=owner)
+
+    context = {
+        'car_form': car_form,
+        'owner_form': owner_form,
+        'car': car,
+    }
     return render(request, 'core/edit_car.html', context)
+
 
 @login_required
 def delete_part_view(request, part_id):
@@ -279,4 +317,20 @@ def generate_quotation_pdf(request, job_id):
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
         return HttpResponse('We had some errors creating the PDF.')
+    return response
+
+def generate_car_owner_pdf(car, owner):
+    html_string = render_to_string("core/car_owner_pdf_template.html", {
+        "car": car,
+        "owner": owner,
+    })
+
+    result = io.BytesIO()
+
+    pdf = pisa.CreatePDF(io.BytesIO(html_string.encode('utf-8')), dest=result)
+    if pdf.err:
+        return HttpResponse("Error generating PDF", status=500)
+
+    response = HttpResponse(result.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename=car_{car.plate_number}_owner.pdf'
     return response

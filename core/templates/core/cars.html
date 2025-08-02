@@ -4,6 +4,7 @@
 
 {% block content %}
 <style>
+    /* استایل‌های شما برای جدول و بج‌ها صحیح است و باقی می‌ماند */
     .table>tbody>tr>td,
     .table>tbody>tr>th {
         border-top: 1px solid #f0f0f0;
@@ -22,85 +23,67 @@
         background-color: #6c757d;
     }
 
-    .status-pending_approval {
-        background-color: #ffc107;
-        color: #000;
-    }
-
-    .status-working {
-        background-color: #0d6efd;
-    }
-
-    .status-ready_exit {
-        background-color: #198754;
-    }
-
-    .status-pending_approval {
-        background-color: #ffc107;
-        color: #000;
-    }
-
     .status-quotation {
         background-color: #0dcaf0;
     }
 
+    .status-pending_approval {
+        background-color: #ffc107;
+        color: #000;
+    }
+
     .status-working {
         background-color: #0d6efd;
     }
+
+    .status-ready_to_exit {
+        background-color: #198754;
+    }
 </style>
 
-
 <div class="container-lg my-5">
+
     <div class="card shadow border-0" style="border-radius: 1rem;">
+
         <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
             <h4 class="mb-0">Active Repair Jobs</h4>
-            {% if perms.core.add_car %}
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCarModal">
-                Register New Car <i class="bi bi-plus-circle me-2"></i>
+                <i class="bi bi-plus-circle me-2"></i>Register New Car
             </button>
-            {% endif %}
         </div>
 
         <div class="card-body p-4">
 
-            <!-- In your car_management.html template -->
-
             <form method="get" class="row g-3 align-items-center mb-4 filter-bar">
-
                 <div class="col-lg-3">
                     <div class="filter-input-wrapper">
+                        <i class="bi bi-hash filter-icon"></i>
                         {{ filter_form.plate_number }}
                     </div>
                 </div>
-
-                <!-- START: New input for Car Brand -->
                 <div class="col-lg-3">
                     <div class="filter-input-wrapper">
-                        {{ filter_form.car_brand }}
+                        <i class="bi bi-bookmark-star filter-icon"></i>
+                        {{ filter_form.claim_number }}
                     </div>
                 </div>
-                <!-- END: New input for Car Brand -->
-
                 <div class="col-lg-2">
                     <div class="filter-input-wrapper">
                         <i class="bi bi-toggles filter-icon"></i>
                         {{ filter_form.status }}
                     </div>
                 </div>
-
                 <div class="col-lg-2">
                     <div class="filter-input-wrapper">
                         <i class="bi bi-speedometer2 filter-icon"></i>
                         {{ filter_form.estimated_cost }}
                     </div>
                 </div>
-
                 <div class="col-lg-2">
                     <button type="submit" class="btn btn-primary w-100 filter-button">
                         <i class="bi bi-funnel-fill me-2"></i>Filter
                     </button>
                 </div>
-
             </form>
 
             {% if messages %}
@@ -116,40 +99,43 @@
                 <table class="table table-hover table-borderless mb-0">
                     <thead class="text-muted small text-uppercase">
                         <tr>
-                            <th class="py-3">Plate Number</th>
-                            <th class="py-3">Brand</th>
-                            <th class="py-3">Model</th>
-                            <th class="py-3">Claim Number</th>
-                            <th class="py-3">Status</th>
-                            <th class="py-3">Date Registered</th>
+                            <th class="py-3"><a href="?sort=car__plate_number">Plate Number</a></th>
+                            <th class="py-3"><a href="?sort=car__brand">Brand</a></th>
+                            <th class="py-3"><a href="?sort=car__model">Model</a></th>
+                            <th class="py-3"><a href="?sort=car__claim_number">Claim Number</a></th>
+                            <th class="py-3"><a href="?sort=status">Status</a></th>
+                            <th class="py-3"><a href="?sort=car__registered_at">Date Registered</a></th>
                             <th class="py-3">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for job in jobs %}
-                        <tr>
-                            <td><strong>{{ job.car.plate_number }}</strong></td>
-                            <td>{{ job.car.brand }}</td>
-                            <td>{{ job.car.model }}</td>
-                            <td>{{ job.car.claim_number }}</td>
-                            <td>
-                                <span class="status-badge status-{{ job.status }}">
-                                    {{ job.get_status_display }}
-                                </span>
-                            </td>
-                            <td>{{ job.car.registered_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                <a href="{% url 'core:job_detail' job.id %}" class="btn btn-sm btn-outline-secondary">
-                                    Details
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center py-5">No active jobs found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
+                    <div class="modal-body">
+
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td><strong>{{ job.car.plate_number }}</strong></td>
+                                <td>{{ job.car.brand }}</td>
+                                <td>{{ job.car.model }}</td>
+                                <td>{{ job.car.claim_number }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ job.status }}">
+                                        {{ job.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ job.car.registered_at|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'core:job_detail' job.id %}"
+                                        class="btn btn-sm btn-outline-secondary">
+                                        Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5">No active jobs found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -166,14 +152,67 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {{ form.as_p }}
+                    <div id="car-form-step">
+                        <h6 class="mb-3">Step 1: Car Details</h6>
+                        {{ car_form.as_p }}
+                    </div>
+                    <div id="owner-form-step" style="display: none;">
+                        <h6 class="mb-3">Step 2: Owner Details</h6>
+                        {{ owner_form.as_p }}
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Register Car</button>
+                    <button type="button" class="btn btn-secondary" id="modal-back-btn"
+                        style="display: none;">Back</button>
+                    <button type="button" class="btn btn-primary" id="modal-next-btn">Next</button>
+                    <button type="submit" class="btn btn-success" id="modal-submit-btn" style="display: none;">Register
+                        Car</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 {% endblock content %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const nextBtn = document.getElementById('modal-next-btn');
+        const backBtn = document.getElementById('modal-back-btn');
+        const submitBtn = document.getElementById('modal-submit-btn');
+        const carStep = document.getElementById('car-form-step');
+        const ownerStep = document.getElementById('owner-form-step');
+        const modalTitle = document.getElementById('addCarModalLabel');
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                // Hide car form and show owner form
+                carStep.style.display = 'none';
+                ownerStep.style.display = 'block';
+
+                // Update buttons
+                nextBtn.style.display = 'none';
+                backBtn.style.display = 'inline-block';
+                submitBtn.style.display = 'inline-block';
+
+                modalTitle.textContent = 'Register Owner';
+            });
+        }
+
+        if (backBtn) {
+            backBtn.addEventListener('click', function () {
+                // Hide owner form and show car form
+                ownerStep.style.display = 'none';
+                carStep.style.display = 'block';
+
+                // Update buttons
+                backBtn.style.display = 'none';
+                submitBtn.style.display = 'none';
+                nextBtn.style.display = 'inline-block';
+
+                modalTitle.textContent = 'Register New Car';
+            });
+        }
+    });
+</script>
+{% endblock scripts %}
