@@ -19,14 +19,13 @@ def delete_images_on_archive(sender, instance, **kwargs):
     if old_instance.status != 'archived' and instance.status == 'archived':
         car = instance.car
         
-        if car.car_picture:
-            if os.path.isfile(car.car_picture.path):
-                os.remove(car.car_picture.path)
-                print(f"Deleted car picture: {car.car_picture.path}") 
+        if car.image:
+            if os.path.isfile(car.image.path):
+                os.remove(car.image.path)
+                print(f"Deleted car picture: {car.image.path}")
 
-    
         for item in instance.quotation_items.all():
             if item.picture:
                 if os.path.isfile(item.picture.path):
                     os.remove(item.picture.path)
-                    print(f"Deleted quotation picture: {item.picture.path}") 
+                    print(f"Deleted quotation picture: {item.picture.path}")

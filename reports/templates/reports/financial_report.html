@@ -3,71 +3,84 @@
 {% block title %}Financial Report{% endblock %}
 
 {% block report_content %}
-<div class="container-lg my-5">
-    <div class="card shadow border-0" style="border-radius: 1rem;">
-        <div class="card-header bg-light py-3">
-            <h4 class="mb-0">Financial Report</h4>
-        </div>
-        <div class="card-body p-4">
-            <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light rounded">
-                <div class="col-md-4"><label class="form-label">Start Date</label>{{ form.start_date }}</div>
-                <div class="col-md-4"><label class="form-label">End Date</label>{{ form.end_date }}</div>
-                <div class="col-md-2 align-self-end"><button type="submit"
-                        class="btn btn-secondary w-100">Filter</button></div>
-                <div class="col-md-2 align-self-end">
-                    <a href="{% url 'reports:export_financial_excel' %}?start_date={{ request.GET.start_date|default:'' }}&end_date={{ request.GET.end_date|default:'' }}"
-                        class="btn btn-success w-100">
-                        <i class="bi bi-file-earmark-excel"></i> Export
-                    </a>
-                </div>
-            </form>
+<style>
+    .total-row {
+        background-color: #717d8a;
+        color: white;
+    }
 
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Car</th>
-                            <th>Model</th>
-                            <th>Plate</th>
-                            <th>LPO</th>
-                            <th>Sign</th> <!-- Added Sign Header -->
-                            <th>Claim No</th>
-                            <th class="text-end">Deal</th>
-                            <th class="text-end">VAT (5%)</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for job in report_jobs %}
-                        <tr>
-                            <td>{{ job.car.brand }}</td>
-                            <td>{{ job.car.model }}</td>
-                            <td>{{ job.car.plate_number }}</td>
-                            <td>{% if job.lpo_confirmed %}YES{% else %}NO{% endif %}</td>
-                            <td>{% if job.sign_confirmed %}YES{% else %}NO{% endif %}</td> <!-- Added Sign Data -->
-                            <td>{{ job.car.claim_number }}</td>
-                            <td class="text-end">{{ job.deal|floatformat:2 }}</td>
-                            <td class="text-end">{{ job.vat|floatformat:2 }}</td>
-                            <td class="text-end">{{ job.total|floatformat:2 }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="9" class="text-center py-5">No data found.</td> <!-- Updated colspan -->
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-dark">
-                            <td colspan="6" class="text-end fw-bold">Grand Total:</td> <!-- Updated colspan -->
-                            <td class="text-end fw-bold">{{ grand_total_deal|floatformat:2 }}</td>
-                            <td class="text-end fw-bold">{{ grand_total_vat|floatformat:2 }}</td>
-                            <td class="text-end fw-bold">{{ grand_total_final|floatformat:2 }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
+    .total-row:hover {
+        background-color: #717d8a !important;
+        color: white !important;
+    }
+</style>
+
+<form method="get" class="row g-3 align-items-end mb-4 p-3 bg-light rounded">
+    <div class="col-md-2"><label class="form-label">Start Date</label>{{ form.start_date }}</div>
+    <div class="col-md-2"><label class="form-label">End Date</label>{{ form.end_date }}</div>
+    <div class="col-md-2"><label class="form-label">Status</label>{{ form.status }}</div>
+    <div class="col-md-2"><label class="form-label">LPO</label>{{ form.lpo }}</div>
+    <div class="col-md-2"><label class="form-label">Sign</label>{{ form.sign }}</div>
+    <div class="col-md-1"><button type="submit" class="btn btn-secondary w-100">Filter</button></div>
+    <div class="col-md-1">
+        <a href="{% url 'reports:export_financial_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success w-100"
+            title="Export to Excel">
+            <i class="bi bi-file-earmark-excel">Export</i>
+        </a>
     </div>
-</div>
+</form>
 
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                {% for field, label in columns %}
+                <th>
+                    {% if current_sort == field %}
+                    <a href="?sort=-{{ field }}&{{ request.GET.urlencode|urlencode|cut:'sort='|cut:'&' }}">
+                        {{ label }} ▲
+                    </a>
+                    {% elif current_sort == '-'|add:field %}
+                    <a href="?sort={{ field }}&{{ request.GET.urlencode|urlencode|cut:'sort='|cut:'&' }}">
+                        {{ label }} ▼
+                    </a>
+                    {% else %}
+                    <a href="?sort={{ field }}&{{ request.GET.urlencode }}">
+                        {{ label }}
+                    </a>
+                    {% endif %}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in report_jobs %}
+            <tr>
+                <td>{{ job.car.brand }}</td>
+                <td>{{ job.car.model }}</td>
+                <td>{{ job.car.plate_number }}</td>
+                <td>{{ job.get_status_display }}</td>
+                <td>{{ job.approved_at|date:"Y-m-d" }}</td>
+                <td>{{ job.deal }}</td>
+                <td>{{ job.lpo_confirmed|yesno:"Yes,No" }}</td>
+                <td>{{ job.sign_confirmed|yesno:"Yes,No" }}</td>
+                <td>{{ job.vat|default:"-" }}</td>
+                <td>{{ job.total|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{{ columns|length }}" class="text-center py-5">No data found.</td>
+            </tr>
+            {% endfor %}
+            <tr class="fw-bold total-row">
+                <td colspan="5" class="text-end">Totals:</td>
+                <td>{{ grand_total_deal }}</td>
+                <td></td>
+                <td></td>
+                <td>{{ grand_total_vat }}</td>
+                <td>{{ grand_total_final }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 {% endblock report_content %}

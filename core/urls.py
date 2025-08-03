@@ -11,6 +11,7 @@ from .views import (
     delete_quotation_item_view,
     resume_timer_view,
     pause_timer_view,
+    generate_car_owner_pdf
 )
 
 app_name = "core"
@@ -35,4 +36,7 @@ urlpatterns = [
 
     path('job/<int:job_id>/pause/', pause_timer_view, name='pause_timer'),
     path('job/<int:job_id>/resume/', resume_timer_view, name='resume_timer'),
+    path('car/<int:car_id>/pdf/', generate_car_owner_pdf, name='car_owner_pdf'),
+        
+
 ]

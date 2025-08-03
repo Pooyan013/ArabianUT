@@ -69,7 +69,7 @@
         .main-table th,
         .main-table td {
             border: 1px solid #dee2e6;
-            padding: 8px;
+            padding: 10px;
             text-align: left;
         }
 
@@ -124,6 +124,7 @@
 </head>
 
 <body>
+    <!-- Header Section -->
     <table class="header-table">
         <tr>
             <td>
@@ -133,13 +134,14 @@
                 <div>VAT ON: OM1100377685</div>
             </td>
             <td class="text-right">
-                <div class="quote-title">QUOTE</div>
+                <div class="quote-title">CarDetail</div>
                 <div><strong>Date:</strong> {{ job.car.registered_at|date:"d/m/Y" }}</div>
                 <div><strong>QUOTE NO:</strong> {{ job.id }}</div>
             </td>
         </tr>
     </table>
 
+    <!-- Customer and Vehicle Details -->
     <div class="details-container">
         <table class="details-table">
             <thead>
@@ -151,80 +153,25 @@
             <tbody>
                 <tr>
                     <td>
-                        <div class="detail-item"><span class="label">TO:</span> {% if job.car.owner %}
-                            {{ job.car.owner}}{% else %}N/A{% endif %}</div>
-
-                        <div class="detail-item"><span class="label">Phone:</span> {% if job.car.owner %}
-                            {{job.car.owner.phone_number }}{% else %}N/A{% endif %}</div>
+                        <div class="detail-item"><span class="label">TO:</span> {% if car.owner %}
+                            {{car.owner.first_name }} {{ car.owner.last_name }}{% else %}N/A{% endif %}</div>
+                        <div class="detail-item"><span class="label">Phone:</span> {% if car.owner %}
+                            {{car.owner.phone_number }}{% else %}N/A{% endif %}</div>
                     </td>
+
                     <td>
-                        <div class="detail-item"><span class="label">Model:</span> {{ job.car.brand }}
-                            {{ job.car.model }} ({{ job.car.year }})</div>
-                        <div class="detail-item"><span class="label">Color:</span> {{ job.car.color }}</div>
-                        <div class="detail-item"><span class="label">Reg no:</span> {{ job.car.plate_number }}</div>
-                        <div class="detail-item"><span class="label">VIN No:</span> {% if job.car.owner %}
-                            {{ job.car.owner.vin_number }}{% else %}N/A{% endif %}</div>
-                        <div class="detail-item"><span class="label">Claim No:</span> {{ job.car.claim_number }}</div>
+                        <div class="detail-item"><span class="label">Model:</span> {{ car.brand }}
+                            {{ car.model }} ({{ car.year }})</div>
+                        <div class="detail-item"><span class="label">Color:</span> {{ car.color }}</div>
+                        <div class="detail-item"><span class="label">Reg no:</span> {{ car.plate_number }}</div>
+                        <div class="detail-item"><span class="label">VIN No:</span>
+                            {% if car.owner %}{{car.owner.vin_number }}{% else %}N/A{% endif %}</div>
+                        <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number }}</div>
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
-
-    <table class="main-table">
-        <thead>
-            <tr>
-                <th>SERVICES PERFORMED AND PARTS</th>
-                <th class="text-right">QTY</th>
-                <th class="text-right">UNIT PRICE</th>
-                <th class="text-right">AMOUNT</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>
-                    {% if item.custom_name %}
-                    {{ item.custom_name|linebreaksbr }}
-                    {% elif item.item_name %}
-                    {{ item.item_name.name }}
-                    {% else %}
-                    Unknown Item
-                    {% endif %}
-                </td>
-                <td class="text-right">{{ item.quantity }}</td>
-                <td class="text-right">{{ item.price|floatformat:2 }}</td>
-                <td class="text-right">{{ item.amount|floatformat:2 }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" style="text-align: center;">No items listed.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="totals-section">
-        <table class="totals-table">
-            <tr>
-                <td class="totals-label">SUB TOTAL</td>
-                <td class="text-right">{{ sub_total|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td class="totals-label">TAX RATE</td>
-                <td class="text-right">{{ tax_rate }}%</td>
-            </tr>
-            <tr>
-                <td class="totals-label">TAX DUE</td>
-                <td class="text-right">{{ tax_due|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <td class="totals-label">TOTAL</td>
-                <td class="text-right">{{ total_final|floatformat:2 }}</td>
-            </tr>
-        </table>
-    </div>
-
     <div class="footer">
         If you have any questions about this price quote, please contact us.
     </div>

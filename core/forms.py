@@ -1,6 +1,7 @@
 from django import forms
 from .models import Car, RepairJob, QuotationItem, Part, Owner
-
+from markdownx.widgets import MarkdownxWidget
+from markdownx.models import MarkdownxField
 class CarRegistrationForm(forms.ModelForm):
     class Meta:
         model = Car
@@ -51,19 +52,22 @@ class DealUpdateForm(forms.ModelForm):
         }
 
 class QuotationItemForm(forms.ModelForm):
-    """Form to add an item to the quotation."""
     class Meta:
         model = QuotationItem
-        fields = ['name', 'picture', 'price']
+        fields = ['item_name', 'custom_name', 'quantity', 'price', 'position']
         labels = {
-            'name': 'Item/Part Name',
-            'picture': 'Picture (Optional)',
-            'price': 'Estimated Price',
+            'item_name': 'Item (select from list)',
+            'custom_name': 'Custom Item Name (if not in list)',
+            'quantity': 'Quantity',
+            'price': 'Unit Price',
+            'position': 'Position',
         }
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'custom_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'item_name': forms.Select(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'min': 1}),
+            'price': forms.NumberInput(attrs={'step': 0.01}),
+            'position': forms.Select(),
         }
 class LpoConfirmationForm(forms.ModelForm):
     """Form for final LPO  confirmation."""

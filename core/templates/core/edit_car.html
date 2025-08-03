@@ -1,4 +1,4 @@
-{% extends "accounts/base.html" %}
+{% extends 'core/base.html' %}
 {% load static %}
 
 {% block title %}Edit Car: {{ car.plate_number }}{% endblock title %}
@@ -45,7 +45,8 @@
         }
 
         .form-floating>label {
-            color: #fff;
+            color: #b0bac9;
+            /* Lighter color for better readability */
             padding: 1rem 0.75rem;
         }
 
@@ -57,19 +58,37 @@
     </style>
     <div class="auth-card">
         <div class="p-4 p-md-5">
-            <h2 class="text-center mb-4 fw-bold">Edit Car Information</h2>
+            <h2 class="page-title text-center mb-2">Edit Car Information</h2>
             <h5 class="text-center text-white-50 mb-4">{{ car.brand }} - {{ car.plate_number }}</h5>
 
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <h5>Car Details</h5>
-                {{ car_form.as_p }}
 
-                <h5>Owner Details</h5>
-                {{ owner_form.as_p }}
+                <h5 class="mt-4">Car Details</h5>
+                {% for field in car_form %}
+                <div class="form-floating mb-3">
+                    {{ field }}
+                    {{ field.label_tag }}
+                </div>
+                {% endfor %}
 
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <button type="submit" name="generate_pdf" class="btn btn-secondary">Download PDF</button>
+                <h5 class="mt-4">Owner Details</h5>
+                {% for field in owner_form %}
+                <div class="form-floating mb-3">
+                    {{ field }}
+                    {{ field.label_tag }}
+                </div>
+                {% endfor %}
+
+                <!-- START: Updated Button Group -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{% url 'core:car_owner_pdf' car.id %}" target="_blank" class="btn btn-secondary">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
+                    <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-light">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                </div>
+                <!-- END: Updated Button Group -->
             </form>
         </div>
     </div>

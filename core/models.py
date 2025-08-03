@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.models import User
+from markdownx.models import MarkdownxField
 
 
 class Owner(models.Model):
@@ -95,16 +96,35 @@ class Part(models.Model):
 
     def __str__(self):
         return f"{self.name} for Job #{self.repair_job.id}"
-
-class QuotationItem(models.Model):
-    """
-    The single, definitive model for an item in a quotation.
-    """
-    repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="quotation_items")
-    name = models.CharField(max_length=200, verbose_name="Item Name")
-    picture = models.ImageField(upload_to="quotations/", null=True, blank=True, verbose_name="Item Picture")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Estimated Price")
+class ItemName(models.Model):
+    name = models.CharField(max_length=200, unique=True)
 
     def __str__(self):
-        return f"Quote Item: {self.name} for Job #{self.repair_job.id}"
-    
+        return self.name
+
+class QuotationItem(models.Model):
+    POSITION_CHOICES = [
+        ('front_left', 'Front Left'),
+        ('front_right', 'Front Right'),
+        ('rear_left', 'Rear Left'),
+        ('rear_right', 'Rear Right'),
+        ('center', 'Center'),
+        ('unknown', 'Unknown'),
+    ]
+    repair_job = models.ForeignKey(RepairJob, on_delete=models.CASCADE, related_name="quotation_items")
+    item_name = models.ForeignKey(ItemName, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Item Name")
+    custom_name = models.CharField(max_length=200, blank=True, verbose_name="Custom Item Name (if not in list)")
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Unit Price")
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")
+    position = models.CharField(max_length=20, choices=POSITION_CHOICES, default='unknown', verbose_name="Position")
+
+    @property
+    def display_name(self):
+        return self.item_name.name if self.item_name else self.custom_name
+
+    @property
+    def amount(self):
+        return self.quantity * self.price
+
+    def __str__(self):
+        return f"Quote Item: {self.display_name} x{self.quantity} for Job #{self.repair_job.id}"

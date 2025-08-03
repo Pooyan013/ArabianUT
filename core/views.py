@@ -9,6 +9,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import permission_required
 from django.template.loader import render_to_string
 import io
+from markdownx.models import MarkdownxField
 
 # Import all the final, correct models and forms
 from .models import Car, RepairJob, Part, QuotationItem
@@ -112,31 +113,20 @@ def job_detail_view(request, job_id):
             form = SignConfirmationForm(request.POST, instance=job)
             if form.is_valid():
                 signed_job = form.save()
-                if signed_job.sign_confirmed:
-                    # Automatically move to the next stage after signing
-                    signed_job.status = 'exit'
-                    signed_job.save()
-                    messages.success(request, 'Signature confirmed. Proceeding to LPO confirmation.')
-                
+                signed_job.status = 'exit'
+                signed_job.save()
+                messages.success(request, 'Signature information saved. Proceeding to LPO confirmation.')
                 return redirect('core:job_detail', job_id=job.id)
 
         elif 'confirm_lpo' in request.POST:
             form = LpoConfirmationForm(request.POST, instance=job)
             if form.is_valid():
                 lpo_job = form.save()
-                if lpo_job.lpo_confirmed:
-                    # Archive the job after LPO is confirmed
-                    lpo_job.status = 'archived'
-                    lpo_job.exited_at = timezone.now()
-                    lpo_job.save()
-                    messages.success(request, 'LPO confirmed and job archived.')
-                else:
-                    messages.warning(request, 'LPO must be confirmed to archive the job.')
-
+                lpo_job.status = 'archived'
+                lpo_job.exited_at = timezone.now()
+                lpo_job.save()
+                messages.success(request, 'LPO information saved and job archived.')
                 return redirect('core:job_detail', job_id=job.id)
-        
-        return redirect('core:job_detail', job_id=job.id)
-
     # For GET requests, create instances of all forms
     context = {
         'job': job,
@@ -281,11 +271,15 @@ def delete_part_view(request, part_id):
 def delete_quotation_item_view(request, item_id):
     item = get_object_or_404(QuotationItem, id=item_id)
     job_id = item.repair_job.id
+
+    item_display_name = item.custom_name if item.custom_name else (item.item_name.name if item.item_name else 'Unknown Item')
+
     if request.method == 'POST':
         item.delete()
-        messages.success(request, f'Item "{item.name}" deleted from quotation.')
+        messages.success(request, f'Item "{item_display_name}" deleted from quotation.')
+
     return redirect('core:job_detail', job_id=job_id)
-# --- END: New View ---
+
 
 @login_required
 def mark_part_as_bought_view(request, part_id):
@@ -298,15 +292,26 @@ def mark_part_as_bought_view(request, part_id):
         messages.success(request, f'Part "{part.name}" marked as {status}.')
     return redirect('core:job_detail', job_id=part.repair_job.id)
 
+
 @login_required
 def generate_quotation_pdf(request, job_id):
-    """Generates a PDF from database QuotationItem objects."""
     job = get_object_or_404(RepairJob, id=job_id)
-    items = QuotationItem.objects.filter(repair_job=job) 
-    total_price = sum(item.price for item in items)
+    items = QuotationItem.objects.filter(repair_job=job)
+    
+    sub_total = sum(item.amount for item in items)
+    tax_rate = Decimal('0.05') # 5% VAT
+    tax_due = sub_total * tax_rate
+    total_final = sub_total + tax_due
     
     template_path = 'reports/quotation_pdf.html'
-    context = {'job': job, 'items': items, 'total_price': total_price}
+    context = {
+        'job': job,
+        'items': items,
+        'sub_total': sub_total,
+        'tax_rate': int(tax_rate * 100),
+        'tax_due': tax_due,
+        'total_final': total_final,
+    }
     
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}.pdf"'
@@ -319,18 +324,27 @@ def generate_quotation_pdf(request, job_id):
         return HttpResponse('We had some errors creating the PDF.')
     return response
 
-def generate_car_owner_pdf(car, owner):
-    html_string = render_to_string("core/car_owner_pdf_template.html", {
-        "car": car,
-        "owner": owner,
-    })
 
-    result = io.BytesIO()
-
-    pdf = pisa.CreatePDF(io.BytesIO(html_string.encode('utf-8')), dest=result)
-    if pdf.err:
-        return HttpResponse("Error generating PDF", status=500)
-
-    response = HttpResponse(result.getvalue(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename=car_{car.plate_number}_owner.pdf'
+@login_required
+def generate_car_owner_pdf(request, car_id):
+    """
+    Generates a PDF with the details of a specific car and its owner.
+    """
+    car = get_object_or_404(Car, id=car_id)
+    
+    template_path = 'reports/car_owner_pdf.html'
+    context = {
+        'car': car,
+        'owner': car.owner,
+    }
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="car_details_{car.plate_number}.pdf"'
+    
+    template = get_template(template_path)
+    html = template.render(context)
+    
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('We had some errors creating the PDF.')
     return response

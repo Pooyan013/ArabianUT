@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     "accounts",
     'accounting',
     'reports',
+    'markdownx',
+    'dal',
+    'dal_select2',
 ]
 
 MIDDLEWARE = [
