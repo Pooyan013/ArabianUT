@@ -104,7 +104,10 @@ class ItemName(models.Model):
 
 class QuotationItem(models.Model):
     POSITION_CHOICES = [
-        ('front_left', 'Front Left'),
+        ('front', 'Front'),
+        ('left', 'Left'),
+        ('right', 'Right'),
+        ('rear', 'Rear'),
         ('front_right', 'Front Right'),
         ('rear_left', 'Rear Left'),
         ('rear_right', 'Rear Right'),

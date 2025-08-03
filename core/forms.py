@@ -113,14 +113,19 @@ class JobFilterForm(forms.Form):
 class PartItemForm(forms.ModelForm):
     class Meta:
         model = Part
-        fields = ['name', 'picture', 'price',]
+        fields = ['name', 'picture', ]
         labels = {
             'name': 'Item/Part Name',
             'picture': 'Picture (Optional)',
-            'price': 'Estimated Price',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+class BuyPartForm(forms.ModelForm):
+    class Meta:
+        model = Part
+        fields = ['price']
+        widgets = {
+            'price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
         }

@@ -22,6 +22,7 @@ from .forms import (
     SignConfirmationForm,
     LpoConfirmationForm,
     OwnerForm,
+    BuyPartForm
 )
 
 # --- Main/Home View ---
@@ -222,10 +223,10 @@ def edit_car_view(request, car_id):
         owner_form = OwnerForm(request.POST, instance=owner)
 
         if car_form.is_valid() and owner_form.is_valid():
-            owner_instance = owner_form.save()  # ابتدا مالک را ذخیره کن
-            car_instance = car_form.save(commit=False)  # ماشین را ذخیره نکن فعلا
-            car_instance.owner = owner_instance       # مالک به ماشین اختصاص داده شود
-            car_instance.save()                        # ماشین را ذخیره کن
+            owner_instance = owner_form.save()  
+            car_instance = car_form.save(commit=False) 
+            car_instance.owner = owner_instance      
+            car_instance.save()                       
 
             messages.success(request, 'Car and owner information updated successfully.')
 
@@ -283,14 +284,20 @@ def delete_quotation_item_view(request, item_id):
 
 @login_required
 def mark_part_as_bought_view(request, part_id):
-    """Marks a part as having been bought."""
     part = get_object_or_404(Part, id=part_id)
+
     if request.method == 'POST':
-        part.is_bought = not part.is_bought
-        part.save()
-        status = "bought" if part.is_bought else "not bought"
-        messages.success(request, f'Part "{part.name}" marked as {status}.')
-    return redirect('core:job_detail', job_id=part.repair_job.id)
+        price = request.POST.get('price')
+        if price:
+            part.price = price
+            part.is_bought = True
+            part.save()
+            messages.success(request, f'Part "{part.name}" marked as bought with price {part.price}.')
+        else:
+            messages.error(request, 'Price is required.')
+        return redirect('core:job_detail', job_id=part.repair_job.id)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 @login_required
