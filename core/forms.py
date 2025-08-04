@@ -6,41 +6,45 @@ class CarRegistrationForm(forms.ModelForm):
     class Meta:
         model = Car
         fields = [
-            'brand', 'model', 'image','plate_number', 'color', 'year', 
-            'claim_number', 'estimated_cost',
+            'brand', 'model', 'image', 'plate_number', 'color', 'year', 
+            'claim_number', 'estimated_cost', 'vin_number' 
         ]
         labels = {
             'brand': 'Brand',
             'model': 'Model',
+            'image': 'Car Image',
             'plate_number': 'Plate Number',
             'color': 'Color',
             'year': 'Year Manufactured',
             'claim_number': 'Claim Number',
             'estimated_cost': 'Estimated Cost Level',
+            'vin_number': "VIN Number"
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            widget_class = 'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
-            field.widget.attrs.update({'class': widget_class})
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs.update({'class': 'form-control form-select'})
+            else:
+                field.widget.attrs.update({'class': 'form-control'})
 
+                
 class OwnerForm(forms.ModelForm):
     """Form for creating a new car owner."""
     class Meta:
         model = Owner
-        fields = ['first_name', 'last_name', 'phone_number', 'vin_number']
+        fields = ['name', 'phone_number']
         labels = {
-            'first_name': 'First Name',
-            'last_name': 'Last Name',
+            'name': 'Full Name',
             'phone_number': 'Phone Number',
-            'vin_number': 'WIN/VIN Number',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'form-control'})
+
 class DealUpdateForm(forms.ModelForm):
     """Form to update the deal amount for a repair job."""
     class Meta:

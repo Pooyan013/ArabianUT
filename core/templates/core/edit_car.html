@@ -46,7 +46,6 @@
 
         .form-floating>label {
             color: #b0bac9;
-            /* Lighter color for better readability */
             padding: 1rem 0.75rem;
         }
 
@@ -67,20 +66,20 @@
                 <h5 class="mt-4">Car Details</h5>
                 {% for field in car_form %}
                 <div class="form-floating mb-3">
-                    {{ field }}
                     {{ field.label_tag }}
+                    {{ field }}
                 </div>
                 {% endfor %}
 
                 <h5 class="mt-4">Owner Details</h5>
                 {% for field in owner_form %}
                 <div class="form-floating mb-3">
-                    {{ field }}
                     {{ field.label_tag }}
+                    {{ field }}
+
                 </div>
                 {% endfor %}
 
-                <!-- START: Updated Button Group -->
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                     <a href="{% url 'core:car_owner_pdf' car.id %}" target="_blank" class="btn btn-secondary">
                         <i class="bi bi-file-earmark-pdf"></i> PDF
@@ -88,7 +87,6 @@
                     <a href="{{ request.META.HTTP_REFERER|escape }}" class="btn btn-light">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Save Changes</button>
                 </div>
-                <!-- END: Updated Button Group -->
             </form>
         </div>
     </div>

@@ -1,13 +1,35 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="UTF-8">
-    <title>Quotation</title>
+    <title>Car Detail</title>
     <style>
         @page {
             size: a4 portrait;
-            margin: 1.5cm;
+            margin-top: 5.5cm;
+            margin-bottom: 3cm;
+            margin-left: 1.5cm;
+            margin-right: 1.5cm;
+
+            @frame header_frame {
+                -pdf-frame-content: header_content;
+                left: 1cm;
+                top: 1cm;
+                width: 19cm;
+                height: 5cm;
+            }
+
+            /* تعریف قاب پاورقی */
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 1cm;
+                bottom: 1cm;
+                width: 19cm;
+                height: 2cm;
+                /* ارتفاع پاورقی شما */
+            }
         }
 
         body {
@@ -16,35 +38,9 @@
             color: #333;
         }
 
-        .header-table,
-        .details-table,
-        .main-table,
-        .totals-table {
+        .details-table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        .header-table td {
-            vertical-align: top;
-            padding: 5px;
-        }
-
-        .company-name {
-            font-size: 24pt;
-            font-weight: bold;
-            color: #003366;
-        }
-
-        .quote-title {
-            font-size: 20pt;
-            font-weight: bold;
-            text-align: right;
-            color: #003366;
-        }
-
-        .details-container {
-            margin-top: 25px;
-            margin-bottom: 25px;
         }
 
         .details-table th,
@@ -62,57 +58,6 @@
             color: #495057;
         }
 
-        .main-table {
-            margin-top: 30px;
-        }
-
-        .main-table th,
-        .main-table td {
-            border: 1px solid #dee2e6;
-            padding: 10px;
-            text-align: left;
-        }
-
-        .main-table thead th {
-            background-color: #003366;
-            color: #ffffff;
-            text-align: center;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .totals-section {
-            margin-top: 30px;
-            page-break-inside: avoid;
-        }
-
-        .totals-table {
-            width: 50%;
-            margin-left: 50%;
-            border: 1px solid #dee2e6;
-        }
-
-        .totals-table td {
-            padding: 10px;
-        }
-
-        .totals-label {
-            font-weight: bold;
-        }
-
-        .footer {
-            text-align: center;
-            font-size: 9pt;
-            color: #777;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
-        }
-
         .detail-item {
             margin-bottom: 5px;
         }
@@ -120,61 +65,52 @@
         .label {
             font-weight: bold;
         }
+
+        #header_content img,
+        #footer_content img {
+            width: 100%;
+        }
     </style>
 </head>
 
 <body>
-    <!-- Header Section -->
-    <table class="header-table">
-        <tr>
-            <td>
-                <div class="company-name">UNITED ARABIAN</div>
-                <div>WORKSHOP NO: 218100288</div>
-                <div>CR NO: 1105997</div>
-                <div>VAT ON: OM1100377685</div>
-            </td>
-            <td class="text-right">
-                <div class="quote-title">CarDetail</div>
-                <div><strong>Date:</strong> {{ job.car.registered_at|date:"d/m/Y" }}</div>
-                <div><strong>QUOTE NO:</strong> {{ job.id }}</div>
-            </td>
-        </tr>
+    <div id="header_content">
+        <img src="{% static 'reports/images/header.png' %}">
+    </div>
+
+    <div id="footer_content">
+        <img src="{% static 'reports/images/footer.png' %}">
+    </div>
+
+    <h2 style="text-align: center; color: #003366;">Car Details Report</h2>
+
+    <table class="details-table">
+        <thead>
+            <tr>
+                <th>CUSTOMER</th>
+                <th>VEHICLE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="detail-item"><span class="label">TO:</span> {{ car.owner.name|default:"N/A" }}</div>
+                    <div class="detail-item"><span class="label">Phone:</span> {{ car.owner.phone_number|default:"N/A"
+                        }}</div>
+                </td>
+                <td>
+                    <div class="detail-item"><span class="label">Model:</span> {{ car.get_brand_display }} {{ car.model
+                        }} ({{ car.year }})</div>
+                    <div class="detail-item"><span class="label">Color:</span> {{ car.get_color_display }}</div>
+                    <div class="detail-item"><span class="label">Reg no:</span> {{ car.plate_number }}</div>
+                    <div class="detail-item"><span class="label">VIN No:</span> {{ car.vin_number|default:"N/A" }}</div>
+                    <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number|default:"N/A" }}
+                    </div>
+                </td>
+            </tr>
+        </tbody>
     </table>
 
-    <!-- Customer and Vehicle Details -->
-    <div class="details-container">
-        <table class="details-table">
-            <thead>
-                <tr>
-                    <th>CUSTOMER</th>
-                    <th>VEHICLE</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <div class="detail-item"><span class="label">TO:</span> {% if car.owner %}
-                            {{car.owner.first_name }} {{ car.owner.last_name }}{% else %}N/A{% endif %}</div>
-                        <div class="detail-item"><span class="label">Phone:</span> {% if car.owner %}
-                            {{car.owner.phone_number }}{% else %}N/A{% endif %}</div>
-                    </td>
-
-                    <td>
-                        <div class="detail-item"><span class="label">Model:</span> {{ car.brand }}
-                            {{ car.model }} ({{ car.year }})</div>
-                        <div class="detail-item"><span class="label">Color:</span> {{ car.color }}</div>
-                        <div class="detail-item"><span class="label">Reg no:</span> {{ car.plate_number }}</div>
-                        <div class="detail-item"><span class="label">VIN No:</span>
-                            {% if car.owner %}{{car.owner.vin_number }}{% else %}N/A{% endif %}</div>
-                        <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number }}</div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="footer">
-        If you have any questions about this price quote, please contact us.
-    </div>
 </body>
 
 </html>

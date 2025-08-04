@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-    /* استایل‌های شما برای جدول و بج‌ها صحیح است و باقی می‌ماند */
     .table>tbody>tr>td,
     .table>tbody>tr>th {
         border-top: 1px solid #f0f0f0;
@@ -17,6 +16,8 @@
         font-size: 0.8em;
         font-weight: 700;
         color: #fff;
+        display: inline-block;
+        white-space: nowrap;
     }
 
     .status-pending_expert {
@@ -36,8 +37,35 @@
         background-color: #0d6efd;
     }
 
-    .status-ready_to_exit {
+    .status-ready_exit {
         background-color: #198754;
+    }
+
+
+    .status-exit {
+        background-color: #0d6efd;
+    }
+
+
+    .status-pending_start {
+        background-color: #fd7e14;
+    }
+
+    .status-pending_part {
+        background-color: #fd7e14;
+    }
+
+    .status-sign {
+        background-color: #6f42c1;
+    }
+
+    .status-paied {
+        background-color: #198754;
+    }
+
+    .status-archived {
+        background-color: #adb5bd;
+        color: #000;
     }
 </style>
 
@@ -108,34 +136,31 @@
                             <th class="py-3">Actions</th>
                         </tr>
                     </thead>
-                    <div class="modal-body">
-
-                        <tbody>
-                            {% for job in jobs %}
-                            <tr>
-                                <td><strong>{{ job.car.plate_number }}</strong></td>
-                                <td>{{ job.car.brand }}</td>
-                                <td>{{ job.car.model }}</td>
-                                <td>{{ job.car.claim_number }}</td>
-                                <td>
-                                    <span class="status-badge status-{{ job.status }}">
-                                        {{ job.get_status_display }}
-                                    </span>
-                                </td>
-                                <td>{{ job.car.registered_at|date:"Y-m-d H:i" }}</td>
-                                <td>
-                                    <a href="{% url 'core:job_detail' job.id %}"
-                                        class="btn btn-sm btn-outline-secondary">
-                                        Details
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5">No active jobs found.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr>
+                            <td><strong>{{ job.car.plate_number }}</strong></td>
+                            <td>{{ job.car.brand }}</td>
+                            <td>{{ job.car.model }}</td>
+                            <td>{{ job.car.claim_number }}</td>
+                            <td>
+                                <span class="status-badge status-{{ job.status }}">
+                                    {{ job.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ job.car.registered_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'core:job_detail' job.id %}" class="btn btn-sm btn-outline-secondary">
+                                    Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">No active jobs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -201,11 +226,9 @@
 
         if (backBtn) {
             backBtn.addEventListener('click', function () {
-                // Hide owner form and show car form
                 ownerStep.style.display = 'none';
                 carStep.style.display = 'block';
 
-                // Update buttons
                 backBtn.style.display = 'none';
                 submitBtn.style.display = 'none';
                 nextBtn.style.display = 'inline-block';

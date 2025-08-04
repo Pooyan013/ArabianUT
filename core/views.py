@@ -9,6 +9,8 @@ from decimal import Decimal
 from django.contrib.auth.decorators import permission_required
 from django.template.loader import render_to_string
 import io
+import os
+from django.conf import settings
 from markdownx.models import MarkdownxField
 
 # Import all the final, correct models and forms
@@ -306,11 +308,11 @@ def generate_quotation_pdf(request, job_id):
     items = QuotationItem.objects.filter(repair_job=job)
     
     sub_total = sum(item.amount for item in items)
-    tax_rate = Decimal('0.05') # 5% VAT
+    tax_rate = Decimal('0.05') 
     tax_due = sub_total * tax_rate
     total_final = sub_total + tax_due
     
-    template_path = 'reports/quotation_pdf.html'
+    template_path = 'reports/quotation_pdf_custom.html'
     context = {
         'job': job,
         'items': items,
@@ -321,11 +323,12 @@ def generate_quotation_pdf(request, job_id):
     }
     
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}_{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf"'
     
     template = get_template(template_path)
     html = template.render(context)
-    
+    print("Using template:", template_path)
+
     pisa_status = pisa.CreatePDF(html, dest=response)
     if pisa_status.err:
         return HttpResponse('We had some errors creating the PDF.')
@@ -339,10 +342,16 @@ def generate_car_owner_pdf(request, car_id):
     """
     car = get_object_or_404(Car, id=car_id)
     
-    template_path = 'reports/car_owner_pdf.html'
+    header_path = os.path.join(settings.STATICFILES_DIRS[0], 'reports/images/header.png')
+    footer_path = os.path.join(settings.STATICFILES_DIRS[0], 'reports/images/footer.png')
+  
+    template_path = 'reports/car_owner_pdf.html' 
     context = {
         'car': car,
         'owner': car.owner,
+        
+        'header_image_path': header_path,
+        'footer_image_path': footer_path,
     }
     
     response = HttpResponse(content_type='application/pdf')
@@ -355,3 +364,35 @@ def generate_car_owner_pdf(request, car_id):
     if pisa_status.err:
         return HttpResponse('We had some errors creating the PDF.')
     return response
+
+
+from django.contrib.auth.decorators import permission_required
+from django.shortcuts import render, redirect
+from decimal import Decimal
+from .models import RepairJob
+
+@permission_required('core.can_manage_repair_dashboard', raise_exception=True)
+def repair_dashboard(request):
+    jobs = RepairJob.objects.all()
+
+    if request.method == 'POST':
+        for job in jobs:
+            # LPO Confirmed
+            job.lpo_confirmed = f'lpo_{job.id}' in request.POST
+
+            # Signature Confirmed
+            job.sign_confirmed = f'sign_{job.id}' in request.POST
+
+            # Deal Update
+            deal_val = request.POST.get(f'deal_{job.id}')
+            if deal_val:
+                try:
+                    job.deal = Decimal(deal_val)
+                except:
+                    pass  
+
+            job.save()
+
+        return redirect('core:repair_dashboard')
+
+    return render(request, 'core/repair_dashboard.html', {'jobs': jobs})

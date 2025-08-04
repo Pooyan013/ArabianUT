@@ -1,31 +1,27 @@
 import os
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save  
 from django.dispatch import receiver
 from .models import RepairJob
 
-@receiver(pre_save, sender=RepairJob)
-def delete_images_on_archive(sender, instance, **kwargs):
+@receiver(post_save, sender=RepairJob)
+def delete_images_on_archive(sender, instance, created, **kwargs):
     """
-    Signal to delete car and quotation images when a RepairJob is archived.
+    سیگنال برای حذف تصاویر خودرو و قطعات، زمانی که وضعیت یک کار تعمیراتی به 'archived' تغییر می‌کند.
+    این سیگنال بعد از ذخیره شدن موفق در دیتابیس اجرا می‌شود.
     """
-    if not instance.pk:
-        return
-
-    try:
-        old_instance = RepairJob.objects.get(pk=instance.pk)
-    except RepairJob.DoesNotExist:
-        return
-
-    if old_instance.status != 'archived' and instance.status == 'archived':
-        car = instance.car
+    if not created and instance.status == 'archived':
         
-        if car.image:
-            if os.path.isfile(car.image.path):
+        car = instance.car
+        if car and car.image:
+            if hasattr(car.image, 'path') and os.path.isfile(car.image.path):
                 os.remove(car.image.path)
                 print(f"Deleted car picture: {car.image.path}")
+                car.image = None
+                car.save()
 
-        for item in instance.quotation_items.all():
-            if item.picture:
-                if os.path.isfile(item.picture.path):
-                    os.remove(item.picture.path)
-                    print(f"Deleted quotation picture: {item.picture.path}")
+
+        for part in instance.parts.all():
+            if part.picture:
+                if hasattr(part.picture, 'path') and os.path.isfile(part.picture.path):
+                    os.remove(part.picture.path)
+                    print(f"Deleted part picture: {part.picture.path}")

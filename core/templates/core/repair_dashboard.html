@@ -1,0 +1,79 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+
+{% block title %}
+Repair Jobs Dashboard
+{% endblock title %}
+
+{% block content %}
+<style>
+    /* این استایل تمام محتوای سلول‌ها را به صورت عمودی در وسط تراز می‌کند */
+    .table > :not(caption) > * > * {
+        vertical-align: middle;
+    }
+</style>
+
+<div class="container-fluid my-4">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="card shadow-sm border-0" style="border-radius: 0.75rem;">
+            <div class="card-header bg-light py-3" style="border-radius: 0.75rem 0.75rem 0 0;">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="bi bi-pencil-square me-2"></i>
+                    Update Repair Job Info
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4" style="width: 30%;">Car</th>
+                                <th class="text-center" style="width: 20%;">LPO Confirmed</th>
+                                <th class="text-center" style="width: 20%;">Signature Confirmed</th>
+                                <th class="pe-3" style="width: 30%;">New Deal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td class="ps-4">
+                                    <strong>{{ job.car.plate_number }}</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="lpo_{{ job.id }}" id="lpo_{{ job.id }}" {% if job.lpo_confirmed %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="sign_{{ job.id }}" id="sign_{{ job.id }}" {% if job.sign_confirmed %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="pe-3">
+                                    <input type="number" name="deal_{{ job.id }}" class="form-control form-control-sm" step="0.01"
+                                           value="{{ job.deal|default_if_none:'' }}" placeholder="e.g., 4851.00">
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center p-5">
+                                    <p class="text-muted mb-0">No jobs available to update.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer d-flex justify-content-end">
+                <button type="submit" name="update_all" class="btn btn-primary">
+                    <i class="bi bi-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

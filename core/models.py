@@ -6,16 +6,14 @@ from markdownx.models import MarkdownxField
 
 
 class Owner(models.Model):
-    first_name = models.CharField(max_length=50, verbose_name="First Name")
-    last_name = models.CharField(max_length=50, verbose_name="Last Name")
+    name = models.CharField(max_length=50, verbose_name="Name", default='Unnamed Owner')
     phone_number = models.CharField(max_length=30, verbose_name="Phone Number")
-    vin_number = models.CharField(max_length=25, verbose_name="VIN Number", unique=True)
     class Meta:
         verbose_name = "Owner"
         verbose_name_plural = "Owners"
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.name}"
     
 class Car(models.Model):
     """Stores permanent information about a physical car."""
@@ -26,15 +24,67 @@ class Car(models.Model):
         ("mid", "Mid"),
         ("heavy", "Heavy"),
     ]
+    BRAND_CHOICES = [
+        ('MERCEDES', 'MERCEDES'),
+        ('BMW', 'BMW'),
+        ('GMC', 'GMC'),
+        ('NISSAN', 'NISSAN'),
+        ('HYUNDAI', 'HYUNDAI'),
+        ('AUDI', 'AUDI'),
+        ('TOYOTA', 'TOYOTA'),
+        ('LEXUS', 'LEXUS'),
+        ('INFINITY', 'INFINITY'),
+        ('DODGE', 'DODGE'),
+        ('MAZDA', 'MAZDA'),
+        ('HONDA', 'HONDA'),
+        ('KIA', 'KIA'),
+        ('LAND ROVER', 'LAND ROVER'),
+        ('PORSCHE', 'PORSCHE'),
+        ('CHEVROLET', 'CHEVROLET'),
+        ('FORD', 'FORD'),
+        ('PEUGEOT', 'Peugeot'),
+        ('JEEP', 'JEEP'),
+        ('MITSUBISHI', 'MITSUBISHI'),
+        ('SUZUKI', 'SUZUKI'),
+        ('V WAGON', 'V WAGON'),
+        ('MINI', 'MINI'),
+        ('MG', 'MG'),
+        ('RENAULT', 'RENUALT'),
+        ('GENESIS', 'GENESIS'),
+        ('CHANGAN', 'CHANGAN'),
+        ('GEELY', 'GEELY'),
+        ('SUBARU', 'SUBARU'),
+        ('CADILLAC', 'CADILAC'),
+        ('JETOUR', 'JETOUR'),
+        ('JAGUAR', 'JAGUAR'),
+        ('VOLVO', 'VOLVO'),
+        ('OTHER', 'Other'),
+    ]
 
-    brand = models.CharField(max_length=50, verbose_name="Brand")
+    # --- Choices for Color Dropdown ---
+    COLOR_CHOICES = [
+        ('RED', 'Red'),
+        ('WHITE', 'White'),
+        ('BLACK', 'Black'),
+        ('BLUE', 'Blue'),
+        ('SILVER', 'Silver'),
+        ('YELLOW', 'Yellow'),
+        ('GREEN', 'Green'),
+        ('GRAY', 'Gray'),
+        ('GOLD', 'Gold'),
+        ('BROWN', 'Brown'),
+    ]
+
+    brand = models.CharField(max_length=50, verbose_name="Brand", choices=BRAND_CHOICES, default='OTHER')
     model =models.CharField(max_length=50, verbose_name="Model", default='N/A')
     image = models.ImageField(upload_to='car_pictures/', null=True, blank=True)
-    owner = models.ForeignKey(Owner, on_delete=models.CASCADE, default=1 ,related_name='cars')
+    owner = models.ForeignKey(Owner, on_delete=models.SET_NULL, null=True, blank=True, related_name='cars')
     plate_number = models.CharField(max_length=20, unique=True, verbose_name="Plate Number")
-    color = models.CharField(max_length=20, verbose_name="Color")
+    color = models.CharField(max_length=20, verbose_name="Color", choices=COLOR_CHOICES, default='WHITE')    
     year = models.IntegerField(verbose_name="Year Manufactured")
     claim_number = models.CharField(max_length=50, verbose_name="Claim Number", default='No Claim')
+    vin_number = models.CharField(max_length=25, verbose_name="VIN Number", unique=True,null=True, blank=True)
+
     registered_at = models.DateTimeField(default=timezone.now, verbose_name="Time Registered")
     registered_by = models.ForeignKey(User,on_delete=models.SET_NULL, null=True,blank=True,verbose_name="Registered By")   
     estimated_cost = models.CharField(
@@ -58,7 +108,7 @@ class RepairJob(models.Model):
         READY_TOEXIT = 'ready_exit', "Ready To Exit"
         SIGN = 'sign', "Waiting For Sign" 
         EXIT = 'exit', "Exit (Awaiting LPO)" 
-        PAIED = 'paied', "Waiting For Pay"
+        PAID = 'paid', "Waiting For Pay"
         ARCHIVED = 'archived', "Archived"
 
     # --- Core Information ---
@@ -85,6 +135,10 @@ class RepairJob(models.Model):
     
     def __str__(self):
         return f"Job for {self.car} - {self.get_status_display()}"
+    class Meta:
+        permissions = [
+            ("can_manage_repair_dashboard", "Can manage repair dashboard"),
+        ]
 
 class Part(models.Model):
     """Represents a single required part with its picture for a repair job."""
@@ -94,8 +148,12 @@ class Part(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Part Price", default=10.00)
     is_bought = models.BooleanField(default=False, verbose_name="Is Bought?")
 
+
     def __str__(self):
-        return f"{self.name} for Job #{self.repair_job.id}"
+        if self.repair_job:
+            return f"{self.name} for Job #{self.repair_job.id}"
+        else:
+            return f"{self.name} (No associated job)"
 class ItemName(models.Model):
     name = models.CharField(max_length=200, unique=True)
 

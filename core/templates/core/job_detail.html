@@ -317,8 +317,7 @@
                         {% if job.status == 'archived' %}
                         <div class="text-center p-5">
                             <h5 class="text-muted"><i class="bi bi-archive-fill me-2"></i>Job Archived</h5>
-                            <p class="text-muted">This job was completed on {{ job.exited_at|date:"Y-m-d H:i"
-                                }}.</p>
+                            <p class="text-muted">This job was completed on {{ job.exited_at|date:"Y-m-d H:i"}}.</p>
                         </div>
                         {% endif %}
                     </div>
