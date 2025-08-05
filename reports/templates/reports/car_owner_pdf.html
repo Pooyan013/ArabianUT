@@ -1,85 +1,112 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <title>Car Detail</title>
-    <style>
-        @page {
-            size: a4 portrait;
-            margin-top: 5.5cm;
-            margin-bottom: 3cm;
-            margin-left: 1.5cm;
-            margin-right: 1.5cm;
+<style>
+    @page {
+        size: A4;
+        /* مارجین فوتر را افزایش دادیم تا بالاتر بیاید */
+        margin: 4cm 2cm 4.5cm 2cm; 
 
-            @frame header_frame {
-                -pdf-frame-content: header_content;
-                left: 1cm;
-                top: 1cm;
-                width: 19cm;
-                height: 5cm;
-            }
-
-            /* تعریف قاب پاورقی */
-            @frame footer_frame {
-                -pdf-frame-content: footer_content;
-                left: 1cm;
-                bottom: 1cm;
-                width: 19cm;
-                height: 2cm;
-                /* ارتفاع پاورقی شما */
-            }
+        @top-left {
+            content: element(header_left);
+        }
+        @top-center {
+            content: element(header_center);
+        }
+        @top-right {
+            content: element(header_right);
         }
 
-        body {
-            font-family: "Helvetica", sans-serif;
-            font-size: 10pt;
-            color: #333;
+        @bottom-right {
+            content: element(footer_content);
+            vertical-align: bottom;
         }
+    }
 
-        .details-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+    #header_left { position: running(header_left); }
+    #header_center { position: running(header_center); }
+    #header_right { position: running(header_right); }
+    #footer_content { position: running(footer_content); }
+    
 
-        .details-table th,
-        .details-table td {
-            padding: 10px;
-            vertical-align: top;
-            border: 1px solid #dee2e6;
-        }
+    @font-face {
+        font-family: 'Noto Sans Arabic';
+        src: url({% static 'fonts/NotoSansArabic-Regular.ttf' %});
+    }
 
-        .details-table th {
-            background-color: #f8f9fa;
-            text-align: left;
-            width: 50%;
-            font-size: 11pt;
-            color: #495057;
-        }
+    body {
+        font-family: 'Noto Sans Arabic', sans-serif;
+        font-size: 10pt;
+        color: #333;
+    }
 
-        .detail-item {
-            margin-bottom: 5px;
-        }
-
-        .label {
-            font-weight: bold;
-        }
-
-        #header_content img,
-        #footer_content img {
-            width: 100%;
-        }
-    </style>
+    .logo {
+        width: 3.5cm;
+        height: auto;
+    }
+    .header-text-left {
+        font-size: 9pt;
+        text-align: left;
+        direction: ltr;
+    }
+    .header-text-right {
+        font-size: 9pt;
+        text-align: right;
+        direction: rtl;
+    }
+    .header-text-left p, .header-text-right p {
+        margin: 2px 0;
+    }
+    
+    #footer_content {
+        text-align: right;
+        font-size: 10pt;
+        color: #555;
+        line-height: 1.6;
+    }
+    
+    .details-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .details-table th, .details-table td {
+        padding: 10px;
+        vertical-align: top;
+        border: 1px solid #dee2e6;
+    }
+    .details-table th {
+        background-color: #f8f9fa;
+        text-align: left;
+        width: 50%;
+        font-size: 11pt;
+    }
+    .detail-item { margin-bottom: 5px; }
+    .label { font-weight: bold; }
+</style>
 </head>
-
 <body>
-    <div id="header_content">
-        <img src="{% static 'reports/images/header.png' %}">
+    <div id="header_left">
+        <img src="{% static 'reports/images/logo.jpeg' %}" class="logo">
     </div>
 
-    <div id="footer_content">
-        <img src="{% static 'reports/images/footer.png' %}">
+    <div id="header_center" class="header-text-left">
+        <p>TELL: +968 99220918</p>
+        <p>P.O.BOX 489</p>
+        <p><strong>C.R.NO :</strong> 1105997</p>
+    </div>
+
+    <div id="header_right" class="header-text-right">
+        <p><strong>الشركة العربية المتحدة للخدمات الهندسیة ش م م</strong></p>
+        <p><strong>UNITED ARABIAN ENGINEERING SERVICE L.L.C</strong></p>
+        <p><strong>VEHICLE REPAIR AND SERVICE STATION</strong></p>
+    </div>
+    <div id="footer_content" dir="rtl">
+        رقم الشهادة الشرطة : 2023/1/149/1/68<br>
+        هاتف : 99220918<br>
+        المعبيلة الصناعية 8 سلطنة عمان
     </div>
 
     <h2 style="text-align: center; color: #003366;">Car Details Report</h2>
@@ -95,22 +122,18 @@
             <tr>
                 <td>
                     <div class="detail-item"><span class="label">TO:</span> {{ car.owner.name|default:"N/A" }}</div>
-                    <div class="detail-item"><span class="label">Phone:</span> {{ car.owner.phone_number|default:"N/A"
-                        }}</div>
+                    <div class="detail-item"><span class="label">Phone:</span> {{ car.owner.phone_number|default:"N/A" }}</div>
                 </td>
                 <td>
-                    <div class="detail-item"><span class="label">Model:</span> {{ car.get_brand_display }} {{ car.model
-                        }} ({{ car.year }})</div>
+                    <div class="detail-item"><span class="label">Model:</span> {{ car.get_brand_display }} {{ car.model }} ({{ car.year }})</div>
                     <div class="detail-item"><span class="label">Color:</span> {{ car.get_color_display }}</div>
                     <div class="detail-item"><span class="label">Reg no:</span> {{ car.plate_number }}</div>
                     <div class="detail-item"><span class="label">VIN No:</span> {{ car.vin_number|default:"N/A" }}</div>
-                    <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number|default:"N/A" }}
-                    </div>
+                    <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number|default:"N/A" }}</div>
                 </td>
             </tr>
         </tbody>
     </table>
 
 </body>
-
 </html>

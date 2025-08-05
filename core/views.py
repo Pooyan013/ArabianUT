@@ -12,6 +12,8 @@ import io
 import os
 from django.conf import settings
 from markdownx.models import MarkdownxField
+from pathlib import Path
+from weasyprint import HTML
 
 # Import all the final, correct models and forms
 from .models import Car, RepairJob, Part, QuotationItem
@@ -311,8 +313,7 @@ def generate_quotation_pdf(request, job_id):
     tax_rate = Decimal('0.05') 
     tax_due = sub_total * tax_rate
     total_final = sub_total + tax_due
-    
-    template_path = 'reports/quotation_pdf_custom.html'
+
     context = {
         'job': job,
         'items': items,
@@ -321,49 +322,38 @@ def generate_quotation_pdf(request, job_id):
         'tax_due': tax_due,
         'total_final': total_final,
     }
-    
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="quotation_{job.car.plate_number}_{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf"'
-    
-    template = get_template(template_path)
-    html = template.render(context)
-    print("Using template:", template_path)
 
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
-        return HttpResponse('We had some errors creating the PDF.')
+    html_string = render_to_string('reports/quotation_pdf_custom.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    pdf_file = html.write_pdf()
+
+    filename = f'quotation_{job.car.plate_number}.pdf'
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
 
 @login_required
 def generate_car_owner_pdf(request, car_id):
-    """
-    Generates a PDF with the details of a specific car and its owner.
-    """
     car = get_object_or_404(Car, id=car_id)
-    
-    header_path = os.path.join(settings.STATICFILES_DIRS[0], 'reports/images/header.png')
-    footer_path = os.path.join(settings.STATICFILES_DIRS[0], 'reports/images/footer.png')
-  
-    template_path = 'reports/car_owner_pdf.html' 
+
+    header_path = os.path.join(settings.STATICFILES_DIRS[0], 'reports', 'images', 'header.png')
+    header_uri = Path(header_path).as_uri()
+
     context = {
         'car': car,
         'owner': car.owner,
-        
-        'header_image_path': header_path,
-        'footer_image_path': footer_path,
+        'header_image_path': header_uri,
     }
-    
-    response = HttpResponse(content_type='application/pdf')
+
+    html_string = render_to_string('reports/car_owner_pdf.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+    pdf_file = html.write_pdf()
+
+    response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="car_details_{car.plate_number}.pdf"'
-    
-    template = get_template(template_path)
-    html = template.render(context)
-    
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
-        return HttpResponse('We had some errors creating the PDF.')
     return response
+
 
 
 from django.contrib.auth.decorators import permission_required
@@ -373,17 +363,14 @@ from .models import RepairJob
 
 @permission_required('core.can_manage_repair_dashboard', raise_exception=True)
 def repair_dashboard(request):
-    jobs = RepairJob.objects.all()
+    jobs = RepairJob.objects.exclude(lpo_confirmed=True, sign_confirmed=True)
 
     if request.method == 'POST':
         for job in jobs:
-            # LPO Confirmed
             job.lpo_confirmed = f'lpo_{job.id}' in request.POST
 
-            # Signature Confirmed
             job.sign_confirmed = f'sign_{job.id}' in request.POST
 
-            # Deal Update
             deal_val = request.POST.get(f'deal_{job.id}')
             if deal_val:
                 try:

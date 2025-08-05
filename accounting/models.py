@@ -1,10 +1,9 @@
 from django.db import models
 from django.conf import settings
 from core.models import RepairJob 
-
+from django.utils import timezone
 class ExpenseCategory(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Category Name")
-    description = models.TextField(blank=True, null=True, verbose_name="Description")
 
     def __str__(self):
         return self.name
@@ -46,6 +45,9 @@ class Employee(models.Model):
     full_name = models.CharField(max_length=200)
     base_salary = models.DecimalField(max_digits=10, decimal_places=2)
     hire_date = models.DateField()
+    id_card = models.CharField(max_length=20, verbose_name="ID Card", default="-")
+    card_number = models.CharField(max_length=20, verbose_name="Card Number", default="-")
+
 
     def __str__(self):
         return self.full_name
@@ -116,6 +118,8 @@ class Expense(models.Model):
     class ExpenseType(models.TextChoices):
         GARAGE = 'garage', "Garage Expense"
         PERSONAL = 'personal', "Personal Expense"
+        PART = 'part', "Car Part"
+        OTHER = 'other', "Other"
     
     class PersonalType(models.TextChoices):
         ADVANCE = 'advance', "Advance (Employee Debt)"
@@ -125,8 +129,15 @@ class Expense(models.Model):
     expense_type = models.CharField(max_length=10, choices=ExpenseType.choices, verbose_name="Type of Expense")
     description = models.TextField(verbose_name="Description")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Amount")
-    transaction_date = models.DateTimeField(verbose_name="Date and Time of Transaction")
+    transaction_date = models.DateTimeField(verbose_name="Transaction Date", default=timezone.now)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Recorded By")
+    related_part = models.ForeignKey(
+        'core.Part',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Related Part (if any)"
+    )
 
     # --- Fields for Garage Expenses ---
     category = models.ForeignKey(
@@ -143,7 +154,6 @@ class Expense(models.Model):
         verbose_name="Custom Category (Other)"
     )
 
-    # --- Fields for Personal Expenses ---
     employee = models.ForeignKey(
         'Employee',
         on_delete=models.CASCADE,

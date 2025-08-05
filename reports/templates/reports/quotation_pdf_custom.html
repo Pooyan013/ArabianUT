@@ -2,8 +2,6 @@
 <html>
 
 <head>
-    <h1>THIS IS THE CUSTOM TEMPLATE</h1>
-
     <meta charset="UTF-8">
     <title>Quotation</title>
     <style>
@@ -13,9 +11,10 @@
         }
 
         body {
-            font-family: "Helvetica", sans-serif;
-            font-size: 10pt;
-            color: #333;
+            font-family: "Calibri", sans-serif;
+            /* فونت مشابه اکسل */
+            font-size: 11pt;
+            color: #000;
         }
 
         .header-table,
@@ -28,80 +27,90 @@
 
         .header-table td {
             vertical-align: top;
-            padding: 5px;
+            padding: 2px;
         }
 
         .company-name {
-            font-size: 24pt;
+            font-size: 28pt;
             font-weight: bold;
-            color: #003366;
+            color: #2F5496;
+            /* رنگ آبی تیره */
         }
 
         .quote-title {
-            font-size: 20pt;
+            font-size: 28pt;
             font-weight: bold;
             text-align: right;
-            color: #003366;
+            color: #2F5496;
         }
 
         .details-container {
-            margin-top: 25px;
-            margin-bottom: 25px;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
         .details-table th,
         .details-table td {
-            padding: 10px;
+            padding: 8px;
             vertical-align: top;
-            border: 1px solid #dee2e6;
+            border: 1px solid #BFBFBF;
+            /* رنگ خاکستری مرزها */
         }
 
         .details-table th {
-            background-color: #f8f9fa;
+            background-color: #F2F2F2;
+            /* پس‌زمینه خاکستری روشن برای هدر */
             text-align: left;
             width: 50%;
-            font-size: 11pt;
-            color: #495057;
+            font-weight: bold;
         }
 
         .main-table {
-            margin-top: 30px;
+            margin-top: 25px;
         }
 
         .main-table th,
         .main-table td {
-            border: 1px solid #dee2e6;
+            border: 1px solid #BFBFBF;
             padding: 8px;
             text-align: left;
         }
 
         .main-table thead th {
-            background-color: #003366;
+            background-color: #2F5496;
+            /* پس‌زمینه آبی تیره */
             color: #ffffff;
             text-align: center;
+            font-weight: bold;
         }
 
         .text-right {
             text-align: right;
         }
 
+        .text-center {
+            text-align: center;
+        }
+
         .totals-section {
-            margin-top: 30px;
+            margin-top: 25px;
             page-break-inside: avoid;
         }
 
         .totals-table {
-            width: 50%;
-            margin-left: 50%;
-            border: 1px solid #dee2e6;
+            width: 40%;
+            margin-left: 60%;
+            border-collapse: collapse;
         }
 
         .totals-table td {
-            padding: 10px;
+            padding: 8px;
+            border: 1px solid #BFBFBF;
         }
 
         .totals-label {
             font-weight: bold;
+            background-color: #F2F2F2;
         }
 
         .footer {
@@ -109,14 +118,13 @@
             font-size: 9pt;
             color: #777;
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
+            bottom: 1cm;
+            left: 1.5cm;
+            right: 1.5cm;
         }
 
         .detail-item {
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .label {
@@ -155,16 +163,16 @@
                     <td>
                         <div class="detail-item"><span class="label">TO:</span> {{ job.car.owner.name|default:"N/A" }}
                         </div>
-                        <div class="detail-item"><span class="label">Phone:</span> {{
-                            job.car.owner.phone_number|default:"N/A" }}</div>
+                        <div class="detail-item"><span class="label">Phone:</span> {{ job.car.owner.phone_number|default:"N/A" }}</div>
+                            
                     </td>
                     <td>
-                        <div class="detail-item"><span class="label">Model:</span> {{ job.car.get_brand_display }} {{
-                            job.car.model }} ({{ job.car.year }})</div>
+                        <div class="detail-item"><span class="label">Model:</span> {{ job.car.get_brand_display }} {{ job.car.model }} ({{ job.car.year }})</div>
+                            
                         <div class="detail-item"><span class="label">Color:</span> {{ job.car.get_color_display }}</div>
                         <div class="detail-item"><span class="label">Reg no:</span> {{ job.car.plate_number }}</div>
-                        <div class="detail-item"><span class="label">VIN No:</span> {{ job.car.vin_number|default:"N/A"
-                            }}</div>
+                        <div class="detail-item"><span class="label">VIN No:</span> {{ job.car.vin_number|default:"N/A" }}</div>
+                            
                         <div class="detail-item"><span class="label">Claim No:</span> {{ job.car.claim_number }}</div>
                     </td>
                 </tr>
@@ -176,7 +184,7 @@
         <thead>
             <tr>
                 <th>SERVICES PERFORMED AND PARTS</th>
-                <th class="text-right">QTY</th>
+                <th class="text-center">QTY</th>
                 <th class="text-right">UNIT PRICE</th>
                 <th class="text-right">AMOUNT</th>
             </tr>
@@ -185,13 +193,13 @@
             {% for item in items %}
             <tr>
                 <td>{{ item.display_name|linebreaksbr }}</td>
-                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-center">{{ item.quantity }}</td>
                 <td class="text-right">{{ item.price|floatformat:2 }}</td>
                 <td class="text-right">{{ item.amount|floatformat:2 }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" style="text-align: center;">No items listed.</td>
+                <td colspan="4" class="text-center">No items listed.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -212,8 +220,8 @@
                 <td class="text-right">{{ tax_due|floatformat:2 }}</td>
             </tr>
             <tr>
-                <td class="totals-label">TOTAL</td>
-                <td class="text-right">{{ total_final|floatformat:2 }}</td>
+                <td class="totals-label" style="background-color: #2F5496; color: #fff;">TOTAL</td>
+                <td class="text-right" style="font-weight: bold;">{{ total_final|floatformat:2 }}</td>
             </tr>
         </table>
     </div>

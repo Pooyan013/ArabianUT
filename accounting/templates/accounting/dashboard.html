@@ -1,83 +1,84 @@
 {% extends "core/base.html" %}
+{% load static %}
 
-{% block title %}Accounting Dashboard{% endblock title %}
+{% block title %}Accounting Dashboard{% endblock %}
 
 {% block content %}
-<div class="container-lg my-5">
+<div class="container my-5">
 
     {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}
-    </div>
+    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
     {% endfor %}
     {% endif %}
 
-    <div class="card shadow border-0" style="border-radius: 1rem;">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+    <div class="card shadow border-0">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light">
             <h4 class="mb-0">Recent Transactions</h4>
             <div>
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#incomeModal">
-                    <i class="bi bi-plus-circle me-2"></i>Add Income
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#incomeModal">
+                    <i class="bi bi-plus-circle me-1"></i> Add Income
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#expenseModal">
-                    <i class="bi bi-dash-circle me-2"></i>Add Expense
+                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    <i class="bi bi-dash-circle me-1"></i> Add Expense
+                </button>
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#buyPartModal">
+                    <i class="bi bi-car-front me-1"></i> Buy Car Part
                 </button>
             </div>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th class="text-end">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tx in transactions %}
-                        <tr>
-                            <td>{{ tx.transaction_date|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                {% if tx.amount > 0 %}
-                                <span class="badge bg-success">Income</span>
-                                {% else %}
-                                <span class="badge bg-danger">Expense</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ tx.description }}</td>
-                            <td
-                                class="text-end fw-bold {% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %}">
-                                {{ tx.amount }}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center py-5">No transactions found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td>{{ tx.transaction_date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if tx.amount > 0 %}
+                            <span class="badge bg-success">Income</span>
+                            {% else %}
+                            <span class="badge bg-danger">Expense</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ tx.description }}</td>
+                        <td class="text-end fw-bold {% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ tx.amount }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5">No transactions found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
+<!-- ✅ Modal: Add Income -->
 <div class="modal fade" id="incomeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{% url 'accounting:dashboard' %}" method="post">
+            <form method="post" action="{% url 'accounting:dashboard' %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Income Record</h5>
+                    <h5 class="modal-title">Add Income</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     {{ income_form.as_p }}
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" name="add_income" class="btn btn-success">Save Income</button>
                 </div>
             </form>
@@ -85,53 +86,182 @@
     </div>
 </div>
 
+<!-- ✅ Modal: Add Expense (Multi-step) -->
 <div class="modal fade" id="expenseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{% url 'accounting:dashboard' %}" method="post">
+            <form method="post" action="{% url 'accounting:dashboard' %}">
                 {% csrf_token %}
                 <div class="modal-header">
-                    <h5 class="modal-title">Add Expense Record</h5>
+                    <h5 class="modal-title">Add Expense</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    {{ expense_form.as_p }}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" name="add_expense" class="btn btn-danger">Save Expense</button>
+
+                    <!-- Step 1 -->
+                    <div id="expense-step1">
+                        <div class="mb-3">
+                            <label for="id_expense_type" class="form-label">Expense Type</label>
+                            {{ expense_form.expense_type }}
+                        </div>
+                        <button type="button" class="btn btn-primary float-end"
+                            onclick="showExpenseStep2()">Next</button>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div id="expense-step2" style="display: none;">
+                        <div class="mb-3">
+                            <label>Description</label>
+                            {{ expense_form.description }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Amount</label>
+                            {{ expense_form.amount }}
+                        </div>
+
+                        <!-- Garage Fields -->
+                        <div class="mb-3 garage-field">
+                            <label>Category</label>
+                            {{ expense_form.category }}
+                        </div>
+                        <div class="mb-3 garage-field">
+                            <label>Custom Category</label>
+                            {{ expense_form.custom_category }}
+                        </div>
+
+                        <!-- Personal Fields -->
+                        <div class="mb-3 personal-field">
+                            <label>Employee</label>
+                            {{ expense_form.employee }}
+                        </div>
+                        <div class="mb-3 personal-field">
+                            <label>Personal Type</label>
+                            {{ expense_form.personal_type }}
+                        </div>
+
+                        <button type="button" class="btn btn-secondary" onclick="backToStep1()">Back</button>
+                        <button type="submit" name="add_expense" class="btn btn-danger float-end">Save Expense</button>
+                    </div>
+
                 </div>
             </form>
         </div>
     </div>
 </div>
-{% endblock content %}
+
+<!-- ✅ Modal: Buy Car Part -->
+<div class="modal fade" id="buyPartModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'accounting:dashboard' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Buy Car Part</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="id_car" class="form-label">Car</label>
+                        {{ buy_part_form.car }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_part" class="form-label">Part</label>
+                        {{ buy_part_form.part }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_price" class="form-label">Price</label>
+                        {{ buy_part_form.price }}
+                    </div>
+
+                    <div class="mb-3" id="part-image-container" style="display:none;">
+                        <label class="form-label">Part Image</label>
+                        <img id="part-image" src="" alt="Part Image" class="img-fluid rounded border"
+                            style="max-height:150px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="buy_part" class="btn btn-primary">Submit Purchase</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block scripts %}
 <script>
+    function showExpenseStep2() {
+        document.getElementById("expense-step1").style.display = "none";
+        document.getElementById("expense-step2").style.display = "block";
+        updateExpenseFields();
+    }
+
+    function backToStep1() {
+        document.getElementById("expense-step1").style.display = "block";
+        document.getElementById("expense-step2").style.display = "none";
+    }
+
+    function updateExpenseFields() {
+        const type = document.getElementById("id_expense_type").value;
+
+        // مخفی کن همه فیلدها اول
+        document.querySelectorAll('.garage-field').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.personal-field').forEach(el => el.style.display = 'none');
+
+        if (type === 'garage') {
+            document.querySelectorAll('.garage-field').forEach(el => el.style.display = 'block');
+        } else if (type === 'personal') {
+            document.querySelectorAll('.personal-field').forEach(el => el.style.display = 'block');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
-        const expenseTypeSelect = document.querySelector('#expenseModal #id_expense_type');
+        const typeField = document.getElementById("id_expense_type");
+        if (typeField) {
+            typeField.addEventListener('change', updateExpenseFields);
+        }
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const carField = document.getElementById('id_car');
+        const partField = document.getElementById('id_part');
+        const partImageContainer = document.getElementById('part-image-container');
+        const partImage = document.getElementById('part-image');
 
-        function toggleExpenseFields() {
-            const selectedType = expenseTypeSelect.value;
-            const garageFields = ['category', 'custom_category'];
-            const personalFields = ['person_name', 'personal_type'];
-
-            if (selectedType === 'garage') {
-                garageFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'block');
-                personalFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'none');
-            } else if (selectedType === 'personal') {
-                garageFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'none');
-                personalFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'block');
-            } else {
-                garageFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'none');
-                personalFields.forEach(name => document.querySelector(`label[for=id_${name}]`).parentElement.style.display = 'none');
-            }
+        if (carField) {
+            carField.addEventListener('change', function () {
+                fetch(`/accounting/ajax/get_parts/?car_id=${carField.value}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        partField.innerHTML = '';
+                        data.parts.forEach(function (item) {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.text = item.name;
+                            option.setAttribute('data-image', item.picture);
+                            partField.appendChild(option);
+                        });
+                        partImageContainer.style.display = 'none';
+                        partImage.src = '';
+                    });
+            });
         }
 
-        if (expenseTypeSelect) {
-            expenseTypeSelect.addEventListener('change', toggleExpenseFields);
-            toggleExpenseFields();
+        if (partField) {
+            partField.addEventListener('change', function () {
+                const selectedOption = partField.options[partField.selectedIndex];
+                const imageUrl = selectedOption.getAttribute('data-image');
+                if (imageUrl) {
+                    partImage.src = imageUrl;
+                    partImageContainer.style.display = 'block';
+                } else {
+                    partImage.src = '';
+                    partImageContainer.style.display = 'none';
+                }
+            });
         }
     });
 </script>

@@ -1,5 +1,4 @@
 {% extends "core/base.html" %}
-<!-- prettier-ignore -->
 {% block title %}Job Details for {{ job.car.plate_number }}{% endblock title %}
 
 {% block content %}
@@ -16,18 +15,17 @@
     <div class="row">
         {# --- START: Left Column --- #}
         <div class="col-lg-4">
-            <!-- Card 1: Car Information -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Car Information</h5>
                     <a href="{% url 'core:edit_car' job.car.id %}" class="btn btn-sm btn-outline-light">Edit</a>
                 </div>
                 <div class="card-body">
-                    {% if job.car.car_picture %}
-                    <img src="{{ job.car.car_picture.url }}" class="img-fluid rounded mb-3"
+                    {% if job.car.image %}
+                    <img src="{{ job.car.image.url }}" class="img-fluid rounded mb-3"
                         alt="{{ job.car.brand }} {{ job.car.model }}">
                     {% endif %}
-                    <p><strong>Brand:</strong> {{ job.car.brand }}</p>
+                    <p><strong>Brand:</strong> {{ job.car.get_brand_display }}</p>
                     <p><strong>Model:</strong> {{ job.car.model }}</p>
                     <p><strong>Plate Number:</strong> {{ job.car.plate_number }}</p>
                     <p><strong>Registered By:</strong> {{ job.car.registered_by.username|default:"-" }}</p>
@@ -38,7 +36,6 @@
                 </div>
             </div>
 
-            <!-- Card 2: Part Management -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Part Management</h5>
@@ -117,58 +114,32 @@
                         {% if job.status == 'quotation' %}
                         <div class="p-2">
                             <h5>Quotation Stage</h5>
-                            <p>Add the required items for the pro-forma invoice. This data will be used for the
-                                PDF export.
-                            </p>
-
+                            <p>Add the required items for the pro-forma invoice. This data will be used for the PDF export.</p>
                             <form method="post" enctype="multipart/form-data" class="mb-4 border p-3 rounded">
                                 <h6>Add Quotation Item</h6>
                                 {% csrf_token %}
-
                                 <div class="mb-3">
                                     <label for="id_item_name" class="form-label">Item (select from list):</label>
-                                        <select name="item_name" id="id_item_name" class="form-select">
-                                    {% for choice in quotation_item_form.fields.item_name.choices %}
-                                    <option value="{{ choice.0 }}" {% if quotation_item_form.initial.item_name|stringformat:"s" == choice.0|stringformat:"s" %}selected{% endif %}>
-                                        {{ choice.1 }}
-                                    </option>
-                                     {% endfor %}
-                                    </select>
+                                    {{ quotation_item_form.item_name }}
                                 </div>
-
                                 <div class="mb-3" id="custom-name-field" style="display:none;">
-                                    <label for="id_custom_name" class="form-label">Custom Item Name (if not in
-                                        list):</label>
-                                    <input type="text" name="custom_name" id="id_custom_name" class="form-control"
-                                        value="{{ quotation_item_form.custom_name.value|default_if_none:'' }}">
+                                    <label for="id_custom_name" class="form-label">Custom Item Name (if not in list):</label>
+                                    {{ quotation_item_form.custom_name }}
                                 </div>
-
                                 {{ quotation_item_form.price.label_tag }}
                                 {{ quotation_item_form.price }}
-
                                 {{ quotation_item_form.quantity.label_tag }}
                                 {{ quotation_item_form.quantity }}
-
                                 {{ quotation_item_form.position.label_tag }}
                                 {{ quotation_item_form.position }}
-
-                                <button type="submit" name="add_quotation_item" class="btn btn-info mt-2">Add
-                                    Item</button>
+                                <button type="submit" name="add_quotation_item" class="btn btn-info mt-2">Add Item</button>
                             </form>
-
                             <h6>Quotation Items List</h6>
                             <ul class="list-group mb-4">
                                 {% for item in quotation_items %}
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>
-                                        {% if item.custom_name %}
-                                        {{ item.custom_name|safe }}
-                                        {% elif item.item_name %}
-                                        {{ item.item_name }}
-                                        {% else %}
-                                        Unknown Item
-                                        {% endif %}
-                                        ({{ item.price|floatformat:2 }}) x {{ item.quantity }}
+                                        {{ item.display_name }} ({{ item.price|floatformat:2 }}) x {{ item.quantity }}
                                         {% if item.position != 'unknown' %}
                                         - Position: {{ item.get_position_display }}
                                         {% endif %}
@@ -183,20 +154,18 @@
                                 <li class="list-group-item">No items added yet.</li>
                                 {% endfor %}
                             </ul>
-
                             <div class="text-center mt-4 d-flex justify-content-center gap-2">
-                                <a href="{% url 'core:quotation_pdf' job.id %}" target="_blank"
-                                    class="btn btn-secondary">
+                                <a href="{% url 'core:quotation_pdf' job.id %}" target="_blank" class="btn btn-secondary">
                                     <i class="bi bi-file-earmark-pdf"></i> Download PDF
                                 </a>
-                                <form action="{% url 'core:update_job_status' job.id 'pending_approval' %}"
-                                    method="post">
+                                <form action="{% url 'core:update_job_status' job.id 'pending_approval' %}" method="post">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-success">Finalize & Proceed</button>
                                 </form>
                             </div>
                         </div>
                         {% endif %}
+                        
                         {% if job.status == 'pending_approval' %}
                         <div class="p-2">
                             <h5>Approval Stage</h5>
@@ -204,8 +173,7 @@
                             <form method="post" class="mb-4 border p-3 rounded">
                                 {% csrf_token %}
                                 {{ deal_form.as_p }}
-                                <button type="submit" name="update_deal" class="btn btn-info">Update
-                                    Deal</button>
+                                <button type="submit" name="update_deal" class="btn btn-info">Update Deal</button>
                             </form>
                             <div class="text-center mt-4">
                                 <form action="{% url 'core:update_job_status' job.id 'pending_start' %}" method="post">
@@ -220,7 +188,6 @@
                         {% if job.status in "pending_start,pending_part,working" %}
                         <div class="text-center p-3">
                             <h5>Repair Timer</h5>
-
                             {% if job.timer_end_time %}
                             <div id="countdown-timer"
                                 class="fs-4 fw-bold {% if job.timer_paused_at %}text-warning{% else %}text-primary{% endif %}"
@@ -236,30 +203,20 @@
                         </div>
                         <hr>
                         <div class="d-flex justify-content-center gap-2">
-                            {% if job.status == 'working' %}
-                            <form action="{% url 'core:update_job_status' job.id 'ready_to_exit' %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success">Finish Work</button>
-                            </form>
+                            {% if job.timer_start_time and job.status == 'working' %}
+                                {% if job.timer_paused_at %}
+                                <form action="{% url 'core:resume_timer' job.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-info">Resume Timer</button>
+                                </form>
+                                {% else %}
+                                <form action="{% url 'core:pause_timer' job.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-warning">Pause Timer</button>
+                                </form>
+                                {% endif %}
                             {% endif %}
-
-                            {% if job.timer_start_time %}
-                            {% if job.timer_paused_at %}
-                            <form action="{% url 'core:resume_timer' job.id %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-info">Resume Timer</button>
-                            </form>
-                            {% else %}
-                            <form action="{% url 'core:pause_timer' job.id %}" method="post">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-warning">Pause Timer</button>
-                            </form>
-                            {% endif %}
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                        <hr>
-                        <div class="d-flex justify-content-center gap-2">
+                            
                             {% if job.status == 'pending_start' %}
                             <form action="{% url 'core:update_job_status' job.id 'working' %}" method="post">
                                 {% csrf_token %}
@@ -272,22 +229,22 @@
                             {% elif job.status == 'pending_part' %}
                             <form action="{% url 'core:update_job_status' job.id 'working' %}" method="post">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-primary">Parts Received, Start
-                                    Work</button>
+                                <button type="submit" class="btn btn-primary">Parts Received, Start Work</button>
                             </form>
                             {% elif job.status == 'working' %}
                             <form action="{% url 'core:update_job_status' job.id 'ready_to_exit' %}" method="post">
-                                {% csrf_token %}<button type="submit" class="btn btn-success">Finish
-                                    Work</button></form>
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success">Finish Work</button>
+                            </form>
                             {% endif %}
                         </div>
-
+                        {% endif %}
+                        
                         {# --- Stage: Ready To Exit --- #}
                         {% if job.status == 'ready_to_exit' %}
                         <div class="text-center p-4">
                             <h5>Ready for Delivery</h5>
                             <p>Please confirm the customer signature has been received to proceed.</p>
-
                             <form method="post" class="border p-4 rounded mt-3 d-inline-block text-start">
                                 {% csrf_token %}
                                 {{ sign_form.as_p }}
@@ -303,7 +260,6 @@
                         <div class="text-center p-4">
                             <h5>Final Step: LPO Confirmation</h5>
                             <p>Confirm the LPO is positive to archive the job.</p>
-
                             <form method="post" class="border p-4 rounded mt-3 d-inline-block text-start">
                                 {% csrf_token %}
                                 {{ lpo_form.as_p }}
@@ -317,7 +273,7 @@
                         {% if job.status == 'archived' %}
                         <div class="text-center p-5">
                             <h5 class="text-muted"><i class="bi bi-archive-fill me-2"></i>Job Archived</h5>
-                            <p class="text-muted">This job was completed on {{ job.exited_at|date:"Y-m-d H:i"}}.</p>
+                            <p class="text-muted">This job was completed on {{ job.exited_at|date:"Y-m-d H:i" }}.</p>
                         </div>
                         {% endif %}
                     </div>
@@ -325,13 +281,15 @@
             </div>
         </div>
     </div>
-    {# --- END: Right Column --- #}
 </div>
+{% endblock content %}
+
 {% block modal %}
 <div class="modal fade" id="buyPartModal" tabindex="-1" aria-labelledby="buyPartModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form id="buyPartForm">
+            <form id="buyPartForm" method="POST" action=""> {# Action will be set by JS #}
+                {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="buyPartModalLabel">Mark Part as Bought</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -350,8 +308,7 @@
         </div>
     </div>
 </div>
-<div class="modal fade" id="viewPartImageModal" tabindex="-1" aria-labelledby="viewPartImageModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="viewPartImageModal" tabindex="-1" aria-labelledby="viewPartImageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -364,10 +321,8 @@
         </div>
     </div>
 </div>
-
 {% endblock modal %}
-</div>
-{% endblock content %}
+
 
 {% block scripts %}
 <script>
@@ -380,8 +335,14 @@
                 var partId = button.getAttribute('data-part-id');
                 var partName = button.getAttribute('data-part-name');
                 var modalTitle = buyPartModal.querySelector('.modal-title');
+                var buyPartForm = document.getElementById('buyPartForm');
+                
                 modalTitle.textContent = 'Mark "' + partName + '" as Bought';
                 buyPartModal.querySelector('#modalPartId').value = partId;
+                
+                // Set the form action dynamically
+                var url = "{% url 'core:mark_part_as_bought' 0 %}".replace('0', partId);
+                buyPartForm.action = url;
             });
         }
 
@@ -400,33 +361,8 @@
             toggleCustomField();
         }
 
-        // Submit buy part form
-        const buyPartForm = document.getElementById('buyPartForm');
-        if (buyPartForm) {
-            buyPartForm.addEventListener('submit', function (event) {
-                event.preventDefault();
-                const partId = buyPartModal.querySelector('#modalPartId').value;
-                const price = buyPartForm.querySelector('input[name="price"]').value;
-
-                // CSRF token from meta tag
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                fetch("{% url 'core:mark_part_as_bought' 0 %}".replace('0', partId), {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfToken,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({ 'price': price }),
-                }).then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('Failed to mark part as bought.');
-                    }
-                });
-            });
-        }
+        // The 'buyPartForm' no longer needs a separate fetch() call, 
+        // as it now submits like a normal form.
 
         // View image modal logic
         const viewPartImageModal = document.getElementById('viewPartImageModal');
@@ -440,6 +376,40 @@
                 img.src = imageUrl;
                 caption.textContent = partName;
             });
+        }
+        
+        // --- START: کد اصلاح و جابجا شده تایمر ---
+        const countdownElement = document.getElementById('countdown-timer');
+        if (countdownElement) {
+            const endTimeString = countdownElement.dataset.endTime;
+            const pausedAtString = countdownElement.dataset.pausedAt;
+
+            if (pausedAtString) {
+                countdownElement.innerHTML = "Timer Paused";
+                countdownElement.classList.remove('text-primary');
+                countdownElement.classList.add('text-warning');
+            } else if (endTimeString) {
+                const endTime = new Date(endTimeString).getTime();
+                const timerInterval = setInterval(function () {
+                    const now = new Date().getTime();
+                    const distance = endTime - now;
+
+                    if (distance < 0) {
+                        clearInterval(timerInterval);
+                        countdownElement.innerHTML = "TIME EXPIRED";
+                        countdownElement.classList.remove('text-primary');
+                        countdownElement.classList.add('text-danger');
+                        return;
+                    }
+
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+                }, 1000);
+            }
         }
     });
 </script>

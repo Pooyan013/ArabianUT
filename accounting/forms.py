@@ -1,5 +1,7 @@
 from django import forms
-from .models import Income, Expense, ExpenseCategory, Attendance
+from .models import Income, Expense, Attendance, ExpenseCategory, SalarySlip
+from core.models import  Car, Part
+from django.db.models import Q
 
 class IncomeForm(forms.ModelForm):
     class Meta:
@@ -42,9 +44,6 @@ class ExpenseForm(forms.ModelForm):
                 field.widget.attrs.update({'class': 'form-control'})
 
 
-from django import forms
-from .models import SalarySlip
-
 class SalarySlipForm(forms.ModelForm):
     class Meta:
         model = SalarySlip
@@ -78,3 +77,54 @@ class AttendanceForm(forms.ModelForm):
             'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'reason': forms.TextInput(attrs={'class': 'form-control'}),
         }
+class ExpenseTypeForm(forms.ModelForm):
+    class Meta:
+        model = Expense
+        fields = ['expense_type']
+        widgets = {
+            'expense_type': forms.Select(attrs={'class': 'form-select'})
+        }
+
+class BuyPartForm(forms.Form):
+    car = forms.ModelChoiceField(
+        queryset=Car.objects.filter(jobs__status__in=[
+            'pending_expert', 'quotation', 'pending_approval', 'pending_start', 'pending_part',
+            'working', 'ready_exit', 'sign', 'exit', 'paid'
+        ]).distinct(),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'placeholder': 'Select Car'
+        }),
+        label="Car"
+    )
+    part = forms.ModelChoiceField(
+        queryset=Part.objects.none(),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'placeholder': 'Select Part'
+        }),
+        label="Part"
+    )
+    price = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter Price'
+        }),
+        label="Price"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'car' in self.data:
+            try:
+                car_id = int(self.data.get('car'))
+                self.fields['part'].queryset = Part.objects.filter(
+                    repair_job__car_id=car_id,
+                    is_bought=False
+                )
+            except (ValueError, TypeError):
+                pass
+        else:
+            self.fields['part'].queryset = Part.objects.none()
