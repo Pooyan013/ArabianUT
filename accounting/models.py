@@ -17,17 +17,17 @@ class Income(models.Model):
         blank=True, 
         verbose_name="Related Repair Job"
     )
-    source = models.CharField(max_length=200, verbose_name="Source of Income (Payer)")
+    source = models.CharField(max_length=200, verbose_name="Source of Income (Payer)", blank=True)
     description = models.TextField(verbose_name="Description")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Amount")
-    transaction_date = models.DateTimeField(verbose_name="Date and Time of Transaction")
+    transaction_date = models.DateTimeField(auto_now_add=True, verbose_name="Date and Time of Transaction")
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Recorded By")
 
     class Meta:
         ordering = ['-transaction_date']
 
     def __str__(self):
-        return f"Income of {self.amount} from {self.source}"
+        return f"Income of {self.amount} from {self.source or 'Unknown'}"
 
 
 from django.db import models
@@ -100,7 +100,6 @@ class SalarySlip(models.Model):
     @property
     def rest(self):
         """Calculates the REMAINING balance for the next period."""
-        # This seems to be the total owed before this period's payment
         total_owed = self.employee.base_salary + self.remaining_before + self.extra - self.mines
         remaining = total_owed - self.paid
         return round(remaining, 2)
@@ -109,68 +108,48 @@ class SalarySlip(models.Model):
         return f"Salary for {self.employee.full_name} for period ending {self.pay_period_end}"
     
 
-
 from django.db import models
 from django.conf import settings
+
 
 class Expense(models.Model):
     """A unified model to track all types of expenses."""
     class ExpenseType(models.TextChoices):
         GARAGE = 'garage', "Garage Expense"
         PERSONAL = 'personal', "Personal Expense"
-        PART = 'part', "Car Part"
+        PART = 'part', "Part Purchase"
         OTHER = 'other', "Other"
     
     class PersonalType(models.TextChoices):
         ADVANCE = 'advance', "Advance (Employee Debt)"
         REIMBURSEMENT = 'reimbursement', "Reimbursement (Employee Credit)"
 
-    # --- Common Fields ---
+    class PaymentSource(models.TextChoices):
+        GARAGE = 'garage', 'Garage Funds'
+        PERSONAL = 'personal', 'Personal Pocket'
+
     expense_type = models.CharField(max_length=10, choices=ExpenseType.choices, verbose_name="Type of Expense")
     description = models.TextField(verbose_name="Description")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Amount")
     transaction_date = models.DateTimeField(verbose_name="Transaction Date", default=timezone.now)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Recorded By")
-    related_part = models.ForeignKey(
-        'core.Part',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="Related Part (if any)"
+    
+    payment_source = models.CharField(
+        max_length=10,
+        choices=PaymentSource.choices,
+        default=PaymentSource.GARAGE,
+        verbose_name="Payment Source"
     )
 
-    # --- Fields for Garage Expenses ---
-    category = models.ForeignKey(
-        'ExpenseCategory', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        verbose_name="Expense Category"
-    )
-    custom_category = models.CharField(
-        max_length=100, 
-        null=True, 
-        blank=True, 
-        verbose_name="Custom Category (Other)"
-    )
-
-    employee = models.ForeignKey(
-        'Employee',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        verbose_name="Employee"
-    )
-    personal_type = models.CharField(
-        max_length=15, 
-        choices=PersonalType.choices, 
-        null=True, 
-        blank=True, 
-        verbose_name="Type of Personal Transaction"
-    )
+    related_part = models.ForeignKey('core.Part', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Related Part")
+    category = models.ForeignKey(ExpenseCategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Expense Category")
+    employee = models.ForeignKey('Employee', on_delete=models.PROTECT, null=True, blank=True, verbose_name="Employee")
+    personal_type = models.CharField(max_length=15, choices=PersonalType.choices, null=True, blank=True, verbose_name="Type of Personal Transaction")
 
     class Meta:
         ordering = ['-transaction_date']
-
+        permissions = [
+            ("can_change_expense_recorder", "Can change the recorder of an expense"),
+        ]
     def __str__(self):
         return f"Expense of {self.amount} for {self.description}"
