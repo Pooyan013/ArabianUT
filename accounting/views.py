@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -11,8 +11,8 @@ import openpyxl
 from io import BytesIO
 
 # Import models from your apps
-from .models import Income, Expense, ExpenseCategory
-from core.models import Part, Car, RepairJob 
+from .models import Income, Expense, ExpenseCategory, Employee, SalarySlip
+from core.models import Part, Car, RepairJob  # Employee model is needed
 
 # Import forms from your app
 from .forms import IncomeForm, BuyPartForm, SimpleExpenseForm
@@ -20,16 +20,13 @@ from .forms import IncomeForm, BuyPartForm, SimpleExpenseForm
 @login_required
 def accounting_dashboard_view(request):
     """
-    Handles the main accounting dashboard, including displaying transactions
-    and processing forms for adding income, expenses, and buying parts.
+    داشبورد اصلی حسابداری، شامل نمایش تراکنش‌ها و پردازش فرم‌ها.
     """
-    # Initialize forms for GET request or if a POST form is invalid
     income_form = IncomeForm()
     buy_part_form = BuyPartForm()
     simple_expense_form = SimpleExpenseForm(user=request.user)
 
     if request.method == 'POST':
-        # --- Handle Add Income Form ---
         if 'add_income' in request.POST:
             income_form = IncomeForm(request.POST)
             if income_form.is_valid():
@@ -41,7 +38,6 @@ def accounting_dashboard_view(request):
             else:
                 messages.error(request, "Please correct the errors in the income form.")
 
-        # --- Handle Buy Part Form ---
         elif 'buy_part' in request.POST:
             buy_part_form = BuyPartForm(request.POST)
             if buy_part_form.is_valid():
@@ -58,14 +54,13 @@ def accounting_dashboard_view(request):
                     amount=price * -1,
                     related_part=part,
                     recorded_by=request.user,
-                    payment_source='garage' # Assuming parts are always bought from garage funds
+                    payment_source='garage' 
                 )
-                messages.success(request, "Part purchased and expense recorded.")
+                messages.success(request, "Part purchased and expense recorded successfully.")
                 return redirect('accounting:dashboard')
             else:
                 messages.error(request, "Please correct the errors in the buy part form.")
 
-        # --- Handle Add Simple Expense Form ---
         elif 'add_simple_expense' in request.POST:
             simple_expense_form = SimpleExpenseForm(request.POST, user=request.user)
             if simple_expense_form.is_valid():
@@ -84,17 +79,30 @@ def accounting_dashboard_view(request):
                 
                 if expense.expense_type == 'garage':
                     expense.category = cd.get('category')
-                    expense.description = expense.category.name
-                else: # For 'personal' and 'other' types
+                    expense.description = expense.category.name if expense.category else 'Garage Expense'
+                else: # برای انواع 'personal' و 'other'
                     expense.description = cd.get('description')
                 
                 expense.save()
+
+                # اگر پرداخت از جیب شخصی بود، مبلغ را به فیش حقوقی کارمند اضافه کن
+                if expense.payment_source == 'personal':
+                    employee = cd.get('employee')
+                    if employee:
+                        latest_slip = SalarySlip.objects.filter(employee=employee, is_closed=False).order_by('-pay_period_end').first()
+                        if latest_slip:
+                            amount_to_reimburse = cd.get('amount')
+                            latest_slip.extra += amount_to_reimburse
+                            latest_slip.save()
+                            messages.info(request, f"Reimbursement of {amount_to_reimburse} was added to {employee.full_name}'s current salary slip.")
+                        else:
+                            messages.warning(request, f"Could not find an open salary slip for {employee.full_name}.")
+                
                 messages.success(request, "Expense added successfully.")
                 return redirect('accounting:dashboard')
             else:
                 messages.error(request, "Please correct the errors in the expense form.")
     
-    # --- GET Request Logic ---
     income_list = Income.objects.all()
     expense_list = Expense.objects.all()
     
@@ -120,7 +128,7 @@ def accounting_dashboard_view(request):
         reverse=True
     )
 
-    paginator = Paginator(transactions, 15) # Show 15 transactions per page
+    paginator = Paginator(transactions, 15) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -132,30 +140,23 @@ def accounting_dashboard_view(request):
     }
     return render(request, 'accounting/dashboard.html', context)
 
-
 @login_required
 def get_parts_for_car(request):
     car_id = request.GET.get('car_id')
     if not car_id:
         return JsonResponse({'parts': []})
-    
     try:
         car = Car.objects.get(id=car_id)
-        parts_queryset = Part.objects.filter(
-            repair_job__car=car, 
-            is_bought=False 
-        ).values('id', 'name', 'picture')
-        
+        parts_queryset = Part.objects.filter(repair_job__car=car, is_bought=False).values('id', 'name', 'picture')
         parts_list = list(parts_queryset)
         return JsonResponse({'parts': parts_list})
-        
     except Car.DoesNotExist:
         return JsonResponse({'parts': []})
 
 
 @login_required
 def export_excel_view(request):
-    # This logic is duplicated. For larger projects, consider refactoring into a helper function.
+    # This logic is duplicated. For larger projects, consider refactoring.
     income_list = Income.objects.all()
     expense_list = Expense.objects.all()
 
@@ -163,10 +164,8 @@ def export_excel_view(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
 
-    if type_filter == 'income':
-        expense_list = expense_list.none()
-    elif type_filter == 'expense':
-        income_list = income_list.none()
+    if type_filter == 'income': expense_list = expense_list.none()
+    elif type_filter == 'expense': income_list = income_list.none()
 
     if from_date:
         income_list = income_list.filter(transaction_date__date__gte=from_date)
@@ -175,11 +174,7 @@ def export_excel_view(request):
         income_list = income_list.filter(transaction_date__date__lte=to_date)
         expense_list = expense_list.filter(transaction_date__date__lte=to_date)
 
-    transactions = sorted(
-        chain(income_list, expense_list),
-        key=attrgetter('transaction_date'),
-        reverse=True
-    )
+    transactions = sorted(chain(income_list, expense_list), key=attrgetter('transaction_date'), reverse=True)
 
     wb = openpyxl.Workbook()
     ws = wb.active

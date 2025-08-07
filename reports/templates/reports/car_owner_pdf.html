@@ -1,92 +1,120 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>Car Detail</title>
-<style>
-    @page {
-        size: A4;
-        /* مارجین فوتر را افزایش دادیم تا بالاتر بیاید */
-        margin: 4cm 2cm 4.5cm 2cm; 
+    <style>
+        @page {
+            size: A4;
+            /* مارجین فوتر را افزایش دادیم تا بالاتر بیاید */
+            margin: 4cm 2cm 4.5cm 2cm;
 
-        @top-left {
-            content: element(header_left);
+            @top-left {
+                content: element(header_left);
+            }
+
+            @top-center {
+                content: element(header_center);
+            }
+
+            @top-right {
+                content: element(header_right);
+            }
+
+            @bottom-right {
+                content: element(footer_content);
+                vertical-align: bottom;
+            }
         }
-        @top-center {
-            content: element(header_center);
-        }
-        @top-right {
-            content: element(header_right);
+
+        #header_left {
+            position: running(header_left);
         }
 
-        @bottom-right {
-            content: element(footer_content);
-            vertical-align: bottom;
+        #header_center {
+            position: running(header_center);
         }
-    }
 
-    #header_left { position: running(header_left); }
-    #header_center { position: running(header_center); }
-    #header_right { position: running(header_right); }
-    #footer_content { position: running(footer_content); }
-    
+        #header_right {
+            position: running(header_right);
+        }
 
-    @font-face {
-        font-family: 'Noto Sans Arabic';
-        src: url({% static 'fonts/NotoSansArabic-Regular.ttf' %});
-    }
+        #footer_content {
+            position: running(footer_content);
+        }
 
-    body {
-        font-family: 'Noto Sans Arabic', sans-serif;
-        font-size: 10pt;
-        color: #333;
-    }
 
-    .logo {
-        width: 3.5cm;
-        height: auto;
-    }
-    .header-text-left {
-        font-size: 9pt;
-        text-align: left;
-        direction: ltr;
-    }
-    .header-text-right {
-        font-size: 9pt;
-        text-align: right;
-        direction: rtl;
-    }
-    .header-text-left p, .header-text-right p {
-        margin: 2px 0;
-    }
-    
-    #footer_content {
-        text-align: right;
-        font-size: 10pt;
-        color: #555;
-        line-height: 1.6;
-    }
-    
-    .details-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .details-table th, .details-table td {
-        padding: 10px;
-        vertical-align: top;
-        border: 1px solid #dee2e6;
-    }
-    .details-table th {
-        background-color: #f8f9fa;
-        text-align: left;
-        width: 50%;
-        font-size: 11pt;
-    }
-    .detail-item { margin-bottom: 5px; }
-    .label { font-weight: bold; }
-</style>
+        @font-face {
+            font-family: 'Noto Sans Arabic';
+            src: url({% static 'fonts/NotoSansArabic-Regular.ttf' %});
+        }
+
+        body {
+            font-family: 'Noto Sans Arabic', sans-serif;
+            font-size: 10pt;
+            color: #333;
+        }
+
+        .logo {
+            width: 3.5cm;
+            height: auto;
+        }
+
+        .header-text-left {
+            font-size: 9pt;
+            text-align: left;
+            direction: ltr;
+        }
+
+        .header-text-right {
+            font-size: 9pt;
+            text-align: right;
+            direction: rtl;
+        }
+
+        .header-text-left p,
+        .header-text-right p {
+            margin: 2px 0;
+        }
+
+        #footer_content {
+            text-align: right;
+            font-size: 10pt;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .details-table th,
+        .details-table td {
+            padding: 10px;
+            vertical-align: top;
+            border: 1px solid #dee2e6;
+        }
+
+        .details-table th {
+            background-color: #f8f9fa;
+            text-align: left;
+            width: 50%;
+            font-size: 11pt;
+        }
+
+        .detail-item {
+            margin-bottom: 5px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+    </style>
 </head>
+
 <body>
     <div id="header_left">
         <img src="{% static 'reports/images/logo.jpeg' %}" class="logo">
@@ -122,18 +150,22 @@
             <tr>
                 <td>
                     <div class="detail-item"><span class="label">TO:</span> {{ car.owner.name|default:"N/A" }}</div>
-                    <div class="detail-item"><span class="label">Phone:</span> {{ car.owner.phone_number|default:"N/A" }}</div>
+                    <div class="detail-item"><span class="label">Phone:</span> {{ car.owner.phone_number|default:"N/A"
+                        }}</div>
                 </td>
                 <td>
-                    <div class="detail-item"><span class="label">Model:</span> {{ car.get_brand_display }} {{ car.model }} ({{ car.year }})</div>
+                    <div class="detail-item"><span class="label">Model:</span> {{ car.get_brand_display }} {{ car.model
+                        }} ({{ car.year }})</div>
                     <div class="detail-item"><span class="label">Color:</span> {{ car.get_color_display }}</div>
                     <div class="detail-item"><span class="label">Reg no:</span> {{ car.plate_number }}</div>
                     <div class="detail-item"><span class="label">VIN No:</span> {{ car.vin_number|default:"N/A" }}</div>
-                    <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number|default:"N/A" }}</div>
+                    <div class="detail-item"><span class="label">Claim No:</span> {{ car.claim_number|default:"N/A" }}
+                    </div>
                 </td>
             </tr>
         </tbody>
     </table>
 
 </body>
+
 </html>

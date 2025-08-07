@@ -14,7 +14,7 @@ from django.conf import settings
 from markdownx.models import MarkdownxField
 from pathlib import Path
 from weasyprint import HTML
-
+from accounting.models import Income
 # Import all the final, correct models and forms
 from .models import Car, RepairJob, Part, QuotationItem
 from .forms import (
@@ -170,15 +170,16 @@ def resume_timer_view(request, job_id):
     return redirect('core:job_detail', job_id=job_id)
 
 
-# --- Status & Data Update Views ---
 @login_required
 def update_job_status_view(request, job_id, next_status):
-    """Handles simple status changes triggered by buttons."""
+    """
+    وضعیت‌های مختلف یک کار تعمیراتی را مدیریت کرده و اقدامات مرتبط
+    مانند شروع تایمر و ثبت خودکار درآمد را اجرا می‌کند.
+    """
     if request.method == 'POST':
         job = get_object_or_404(RepairJob, id=job_id)
         current_status = job.status
         
-        # --- Full Workflow Logic ---
         if next_status == 'quotation' and current_status == 'pending_expert':
             job.status = 'quotation'
             job.expert_inspected_at = timezone.now()
@@ -189,14 +190,25 @@ def update_job_status_view(request, job_id, next_status):
         elif next_status == 'pending_start' and current_status == 'pending_approval':
             job.status = 'pending_start'
             job.approved_at = timezone.now()
-        
+            
+            if job.deal and job.deal > 0:
+                if not Income.objects.filter(repair_job=job).exists():
+                    Income.objects.create(
+                        repair_job=job,
+                        description=f"Approved deal for {job.car}",
+                        amount=job.deal,
+                        recorded_by=request.user
+                    )
+                    messages.success(request, f"Income of {job.deal} recorded for the approved deal.")
+
         elif next_status == 'pending_part':
             job.status = 'pending_part'
             job.parts_pending_at = timezone.now()
         
         elif next_status == 'working':
             job.status = 'working'
-            job.work_started_at = timezone.now()
+            if not job.work_started_at: 
+                job.work_started_at = timezone.now()
             
             if not job.timer_start_time:
                 duration_map = {'nodamage': 2, 'cheap': 4, 'lite': 7, 'mid': 14, 'heavy': 21}
@@ -211,8 +223,12 @@ def update_job_status_view(request, job_id, next_status):
         elif next_status == 'exit' and current_status == 'ready_to_exit':
             job.status = 'exit'
         
+        else:
+            messages.warning(request, f"Invalid status transition from '{job.get_status_display()}' to '{next_status}'.")
+            return redirect('core:job_detail', job_id=job.id)
+
         job.save()
-        messages.success(request, f"Job status updated to '{job.get_status_display()}'")
+        messages.success(request, f"Job status updated to '{job.get_status_display()}'.")
 
     return redirect('core:job_detail', job_id=job.id)
 

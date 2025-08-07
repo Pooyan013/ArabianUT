@@ -1,0 +1,116 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Payroll for {{ employee.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4">
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">Payroll Details for: <span class="text-primary">{{ employee.full_name }}</span></h2>
+                <p class="mb-0 text-muted"><strong>Base Salary:</strong> {{ employee.base_salary|floatformat:2 }}</p>
+            </div>
+            <div>
+                <a href="{% url 'reports:payroll_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    {% for slip in slips %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Pay Period: {{ slip.pay_period_start|date:"d M Y" }} to {{ slip.pay_period_end|date:"d M Y"  }}</h5>
+               
+            {% if slip.is_closed %}
+            <span class="badge bg-secondary rounded-pill">Period Closed</span>
+            {% else %}
+            <span class="badge bg-success rounded-pill">Period Open</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <h6>Salary Calculation</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between">Base Salary: <span>{{ employee.base_salary|floatformat:2 }}</span></li>
+                                
+                        <li class="list-group-item d-flex justify-content-between">Remaining from Previous Period:
+                            <span>{{ slip.remaining_before|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Extra Hours ({{ slip.extra_h }}h):
+                            <span>+ {{ slip.extra_h_cost|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Minus Hours ({{ slip.mines_h }}h):
+                            <span>- {{ slip.mines_h_cost|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Absence Deduction ({{
+                            slip.absence_days }} day/s): <span class="text-danger">- {{ slip.absence_deduction|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Extra Amount (Bonus): <span
+                                class="text-success">+ {{ slip.extra|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between">Minus Amount (Deduction): <span
+                                class="text-danger">- {{ slip.mines|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between list-group-item-secondary">
+                            <strong>Total Owed This Period:</strong> <strong>{{ slip.cost|floatformat:2 }}</strong></li>
+                        <li class="list-group-item d-flex justify-content-between">Amount Paid: <span
+                                class="text-success">- {{ slip.paid|floatformat:2 }}</span></li>
+                        <li class="list-group-item d-flex justify-content-between fw-bold list-group-item-primary">
+                            Remaining Balance (to next period): <span
+                                class="{% if slip.rest < 0 %}text-danger{% endif %}">{{ slip.rest|floatformat:2  }}</span></li>
+                               
+                    </ul>
+                    {% if slip.description %}
+                    <div class="mt-3">
+                        <strong>Notes / Description:</strong>
+                        <p class="text-muted" style="white-space: pre-wrap;">{{ slip.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    {% if not slip.is_closed %}
+                    <div class="border p-3 rounded mb-4 bg-white">
+                        <h6>Add Adjustments</h6>
+                        <form action="{% url 'reports:add_adjustment' slip.id %}" method="post">
+                            {% csrf_token %}
+                            {{ adjustment_form.as_p }}
+                            <button type="submit" class="btn btn-primary w-100">Add</button>
+                        </form>
+                    </div>
+
+                    <div class="border p-3 rounded bg-white">
+                        <h6>Close Period</h6>
+                        <form action="{% url 'reports:close_slip' slip.id %}" method="post"
+                            onsubmit="return confirm('Are you sure you want to close this period? This action cannot be undone.');">
+                            {% csrf_token %}
+                            <p class="small text-muted">Closing this period will finalize the calculations and transfer
+                                the remaining balance to the next period.</p>
+                            {{ close_slip_form.as_p }}
+                            <button type="submit" class="btn btn-danger w-100">Close This Period</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">This period is closed and can no longer be edited.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center">
+            <p>No salary slips found for this employee.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,13 +1,16 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from core.models import RepairJob
 from decimal import Decimal
 from .forms import DateRangeFilterForm
 import openpyxl
+from django.db.models import Sum
+from django.utils import timezone
+from django.contrib import messages
 from django.http import HttpResponse
 from openpyxl.utils import get_column_letter
-from accounting.models import SalarySlip, Expense, Attendance
-
+from accounting.models import SalarySlip, Expense, Attendance, Employee, Income
+from accounting.forms import AttendanceForm, SalarySlipForm, SalaryAdjustmentForm, CloseSlipForm
 @login_required
 def operational_report_view(request):
     sortable_fields = [
@@ -276,3 +279,162 @@ def export_operational_excel(request):
     response['Content-Disposition'] = 'attachment; filename="operational_report.xlsx"'
     workbook.save(response)
     return response
+
+def payroll_dashboard_view(request):
+    if request.method == 'POST':
+        if 'add_absence' in request.POST:
+            attendance_form = AttendanceForm(request.POST)
+            if attendance_form.is_valid():
+                attendance_form.save()
+                messages.success(request, 'Absence record saved successfully.')
+            else:
+                messages.error(request, 'Please correct the errors in the attendance form.')
+            return redirect('reports:dashboard')
+
+        elif 'create_slip' in request.POST:
+            salary_slip_form = SalarySlipForm(request.POST)
+            if salary_slip_form.is_valid():
+                slip = salary_slip_form.save(commit=False)
+                
+                last_slip = SalarySlip.objects.filter(employee=slip.employee).order_by('-pay_period_end').first()
+                if last_slip:
+                    slip.remaining_before = last_slip.rest
+                
+                slip.save()
+                messages.success(request, 'Salary slip created successfully.')
+            else:
+                messages.error(request, 'Please correct the errors in the salary slip form.')
+            return redirect('reports:payroll_dashboard')
+
+    attendance_form = AttendanceForm()
+    salary_slip_form = SalarySlipForm()
+    recent_absences = Attendance.objects.all()[:10]  
+    salary_slips = SalarySlip.objects.select_related('employee').all()
+
+    context = {
+        'attendance_form': attendance_form,
+        'salary_slip_form': salary_slip_form,
+        'recent_absences': recent_absences,
+        'salary_slips': salary_slips,
+    }
+    return render(request, 'reports/dashboard.html', context)
+
+
+@login_required
+def employee_payroll_detail_view(request, employee_id):
+    """
+    Displays the detailed payroll page for a single employee.
+    """
+    employee = get_object_or_404(Employee, id=employee_id)
+    slips = SalarySlip.objects.filter(employee=employee).order_by('-pay_period_start')
+    absences = Attendance.objects.filter(employee=employee)
+    
+    # فرم‌ها برای نمایش در صفحه
+    adjustment_form = SalaryAdjustmentForm()
+    close_slip_form = CloseSlipForm()
+
+    context = {
+        'employee': employee,
+        'slips': slips,
+        'absences': absences,
+        'adjustment_form': adjustment_form,
+        'close_slip_form': close_slip_form,
+    }
+    return render(request, 'reports/employee_detail.html', context)
+
+@login_required
+def add_salary_adjustment_view(request, slip_id):
+    """
+    Handles the submission of the salary adjustment form.
+    """
+    if request.method == 'POST':
+        slip = get_object_or_404(SalarySlip, id=slip_id)
+        form = SalaryAdjustmentForm(request.POST)
+
+        if form.is_valid():
+            cd = form.cleaned_data
+            
+            # مقادیر جدید به مقادیر قبلی اضافه می‌شوند
+            if cd.get('paid_add'): slip.paid += cd['paid_add']
+            if cd.get('extra_h_add'): slip.extra_h += cd['extra_h_add']
+            if cd.get('mines_h_add'): slip.mines_h += cd['mines_h_add']
+            if cd.get('extra_add'): slip.extra += cd['extra_add']
+            if cd.get('mines_add'): slip.mines += cd['mines_add']
+            
+            new_desc = cd.get('description')
+            if new_desc:
+                slip.description = (slip.description or "") + f"\n- Adjustment: {new_desc}"
+
+            slip.save()
+            messages.success(request, "Adjustments saved successfully.")
+        else:
+            messages.error(request, "Invalid data submitted.")
+            
+    return redirect('reports:employee_detail', employee_id=slip.employee.id)
+
+@login_required
+def close_salary_slip_view(request, slip_id):
+    """
+    Closes the current salary slip and transfers the remaining balance.
+    """
+    if request.method == 'POST':
+        slip_to_close = get_object_or_404(SalarySlip, id=slip_id)
+        form = CloseSlipForm(request.POST)
+
+        if form.is_valid():
+            slip_to_close.is_closed = True
+            slip_to_close.save()
+
+            next_period_start = slip_to_close.pay_period_end + timezone.timedelta(days=1)
+            next_slip, created = SalarySlip.objects.get_or_create(
+                employee=slip_to_close.employee,
+                pay_period_start=next_period_start,
+                defaults={
+                    'pay_period_end': next_period_start + timezone.timedelta(days=29), # فرض دوره یک ماهه
+                    'remaining_before': slip_to_close.rest, 
+                }
+            )
+            if not created:
+                next_slip.remaining_before += slip_to_close.rest
+                next_slip.save()
+
+            messages.success(request, f"Period for {slip_to_close.employee.full_name} closed. Remaining balance transferred.")
+        else:
+            messages.error(request, "You must confirm to close the period.")
+
+    return redirect('reports:employee_detail', employee_id=slip_to_close.employee.id)
+
+
+@login_required
+def profit_report_view(request):
+    from_date = request.GET.get('from')
+    to_date = request.GET.get('to')
+
+    incomes = Income.objects.all()
+    expenses = Expense.objects.all()
+
+    if from_date:
+        incomes = incomes.filter(transaction_date__date__gte=from_date)
+        expenses = expenses.filter(transaction_date__date__gte=from_date)
+    if to_date:
+        incomes = incomes.filter(transaction_date__date__lte=to_date)
+        expenses = expenses.filter(transaction_date__date__lte=to_date)
+
+    total_income = incomes.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    total_expense = expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_expense = abs(total_expense)
+
+    net_profit = total_income - total_expense
+
+    context = {
+        'total_income': total_income,
+        'total_expense': total_expense,
+        'net_profit': net_profit,
+        'incomes': incomes.order_by('-transaction_date'),
+        'expenses': expenses.order_by('-transaction_date'),
+        'from_date': from_date, 
+        'to_date': to_date,
+        'active_page': 'profit-report',
+    }
+    return render(request, 'reports/profit_report.html', context)

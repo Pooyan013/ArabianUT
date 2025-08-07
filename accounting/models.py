@@ -79,37 +79,62 @@ class SalarySlip(models.Model):
     extra = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) 
     mines = models.DecimalField(max_digits=10, decimal_places=2, default=0.00) 
     description = models.CharField(max_length=255, blank=True, null=True)
+    is_closed = models.BooleanField(default=False, verbose_name="Is Period Closed?")
 
+    # --- START: متدهای property با منطق جدید ---
+
+    @property
+    def absence_days(self):
+        """تعداد روزهای غیبت ثبت شده در این دوره حقوقی را محاسبه می‌کند."""
+        return Attendance.objects.filter(
+            employee=self.employee,
+            date__range=(self.pay_period_start, self.pay_period_end)
+        ).count()
+
+    @property
+    def hourly_rate(self):
+        """نرخ دستمزد ساعتی را بر اساس حقوق پایه محاسبه می‌کند."""
+        if self.employee.base_salary:
+            return self.employee.base_salary / Decimal('300.0')
+        return Decimal('0.0')
+
+    @property
+    def absence_deduction(self):
+        """مبلغ کل جریمه غیبت را محاسبه می‌کند (هر روز غیبت = ۱۰ ساعت کاری)."""
+        return Decimal(self.absence_days * 10) * self.hourly_rate
+        
     @property
     def cost(self):
         """
-        مبلغ قابل پرداخت را بدون کسر خودکار غیبت محاسبه می‌کند.
+        مبلغ نهایی قابل پرداخت در این دوره را با در نظر گرفتن تمام موارد محاسبه می‌کند.
         """
         salary = self.employee.base_salary
         
-        hour_rate = salary / Decimal('300.0')
-        extra_h_cost = Decimal(str(self.extra_h)) * hour_rate
-        mines_h_cost = Decimal(str(self.mines_h)) * hour_rate
+        # محاسبه ارزش اضافه‌کاری و کسری ساعت
+        extra_h_cost = Decimal(str(self.extra_h)) * self.hourly_rate
+        mines_h_cost = Decimal(str(self.mines_h)) * self.hourly_rate
         
+        # محاسبه نهایی با کسر جریمه غیبت
         total_cost = (salary + self.remaining_before - self.paid + 
                       extra_h_cost - mines_h_cost + 
-                      self.extra - self.mines)
+                      self.extra - self.mines - self.absence_deduction)
         
         return round(total_cost, 2)
-      
+        
     @property
     def rest(self):
-        """Calculates the REMAINING balance for the next period."""
-        total_owed = self.employee.base_salary + self.remaining_before + self.extra - self.mines
+        """باقیمانده حساب برای انتقال به دوره بعد را محاسبه می‌کند."""
+        total_owed = (self.employee.base_salary + self.remaining_before + 
+                      (Decimal(str(self.extra_h)) * self.hourly_rate) + self.extra - 
+                      (Decimal(str(self.mines_h)) * self.hourly_rate) - self.mines -
+                      self.absence_deduction)
+                      
         remaining = total_owed - self.paid
         return round(remaining, 2)
 
     def __str__(self):
         return f"Salary for {self.employee.full_name} for period ending {self.pay_period_end}"
-    
 
-from django.db import models
-from django.conf import settings
 
 
 class Expense(models.Model):

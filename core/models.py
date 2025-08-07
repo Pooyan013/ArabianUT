@@ -4,7 +4,6 @@ from datetime import timedelta
 from django.contrib.auth.models import User
 from markdownx.models import MarkdownxField
 
-
 class Owner(models.Model):
     name = models.CharField(max_length=50, verbose_name="Name", default='Unnamed Owner')
     phone_number = models.CharField(max_length=30, verbose_name="Phone Number")
@@ -102,7 +101,7 @@ class Car(models.Model):
         return not self.jobs.filter(is_archived=False).exists()
     
 class RepairJob(models.Model):
-    """Tracks a single repair process for a car from start to finish."""
+    """یک فرآیند تعمیر از ابتدا تا انتها را برای یک خودرو پیگیری می‌کند."""
     class Stage(models.TextChoices):
         PENDING_EXPERT = 'pending_expert', "Pending for Expert"
         QUOTATION = 'quotation', "Quotation" 
@@ -110,20 +109,17 @@ class RepairJob(models.Model):
         PENDING_START = 'pending_start', "Pending to Start"
         PENDING_PART = 'pending_part', "Pending Part"
         WORKING = 'working', "Working"
-        READY_TOEXIT = 'ready_exit', "Ready To Exit"
+        READY_TO_EXIT = 'ready_to_exit', "Ready To Exit"
         SIGN = 'sign', "Waiting For Sign" 
         EXIT = 'exit', "Exit (Awaiting LPO)" 
         PAID = 'paid', "Waiting For Pay"
         ARCHIVED = 'archived', "Archived"
 
-    # --- Core Information ---
-    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name="jobs")
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name="jobs", verbose_name="Related Car")
     status = models.CharField(max_length=20, choices=Stage.choices, default=Stage.PENDING_EXPERT, verbose_name="Status")
     
-    # --- Stage-Specific Data ---
     deal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Deal Amount")
     
-    # --- Timestamps for each stage ---
     expert_inspected_at = models.DateTimeField(null=True, blank=True, verbose_name="Time of Expert Inspection")
     approved_at = models.DateTimeField(null=True, blank=True, verbose_name="Time of Approval")
     work_started_at = models.DateTimeField(null=True, blank=True, verbose_name="Time Work Started")
@@ -134,13 +130,34 @@ class RepairJob(models.Model):
     timer_end_time = models.DateTimeField(null=True, blank=True, verbose_name="Timer End Time")
     timer_paused_at = models.DateTimeField(null=True, blank=True, verbose_name="Timer Paused At")
 
-    # --- Finalization ---
     lpo_confirmed = models.BooleanField(default=False, verbose_name="LPO Confirmed")
     sign_confirmed = models.BooleanField(default=False, verbose_name="Sign Confirmed")
     
     def __str__(self):
         return f"Job for {self.car} - {self.get_status_display()}"
+
+    def save(self, *args, **kwargs):
+        """
+        متد save بازنویسی شده تا درآمد را به صورت خودکار بر اساس مبلغ deal ثبت کند.
+        """
+        from accounting.models import Income
+
+        super().save(*args, **kwargs)
+
+        if self.deal and self.deal > 0:
+            Income.objects.update_or_create(
+                repair_job=self,
+                defaults={
+                    'description': f"Approved deal for {self.car}",
+                    'amount': self.deal,
+                    'recorded_by': self.car.registered_by
+                }
+            )
+        elif self.deal is None or self.deal <= 0:
+            Income.objects.filter(repair_job=self).delete()
+            
     class Meta:
+        ordering = ['-car__registered_at']
         permissions = [
             ("can_manage_repair_dashboard", "Can manage repair dashboard"),
         ]
